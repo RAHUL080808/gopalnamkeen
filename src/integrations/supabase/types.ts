@@ -14,16 +14,254 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bills: {
+        Row: {
+          amount: number
+          balance: number | null
+          bill_date: string
+          bill_number: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          paid_amount: number
+          shop_id: string
+          status: string | null
+        }
+        Insert: {
+          amount: number
+          balance?: number | null
+          bill_date?: string
+          bill_number?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          paid_amount?: number
+          shop_id: string
+          status?: string | null
+        }
+        Update: {
+          amount?: number
+          balance?: number | null
+          bill_date?: string
+          bill_number?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          paid_amount?: number
+          shop_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bills_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_corrections: {
+        Row: {
+          created_at: string
+          id: string
+          new_amount: number | null
+          new_mode: Database["public"]["Enums"]["payment_mode"] | null
+          payment_id: string
+          reason: string
+          requested_by: string
+          requested_by_name: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["correction_status"]
+          void_payment: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          new_amount?: number | null
+          new_mode?: Database["public"]["Enums"]["payment_mode"] | null
+          payment_id: string
+          reason: string
+          requested_by?: string
+          requested_by_name?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["correction_status"]
+          void_payment?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          new_amount?: number | null
+          new_mode?: Database["public"]["Enums"]["payment_mode"] | null
+          payment_id?: string
+          reason?: string
+          requested_by?: string
+          requested_by_name?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["correction_status"]
+          void_payment?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_corrections_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          bill_id: string
+          created_at: string
+          employee_id: string
+          employee_name: string
+          employee_role: string
+          id: string
+          is_void: boolean
+          mode: Database["public"]["Enums"]["payment_mode"]
+          paid_at: string
+          reference: string | null
+          shop_id: string
+        }
+        Insert: {
+          amount: number
+          bill_id: string
+          created_at?: string
+          employee_id?: string
+          employee_name?: string
+          employee_role?: string
+          id?: string
+          is_void?: boolean
+          mode: Database["public"]["Enums"]["payment_mode"]
+          paid_at?: string
+          reference?: string | null
+          shop_id: string
+        }
+        Update: {
+          amount?: number
+          bill_id?: string
+          created_at?: string
+          employee_id?: string
+          employee_name?: string
+          employee_role?: string
+          id?: string
+          is_void?: boolean
+          mode?: Database["public"]["Enums"]["payment_mode"]
+          paid_at?: string
+          reference?: string | null
+          shop_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          phone: string | null
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string
+          id: string
+          phone?: string | null
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
+      shops: {
+        Row: {
+          address: string | null
+          contact_name: string | null
+          created_at: string
+          id: string
+          name: string
+          phone: string | null
+        }
+        Insert: {
+          address?: string | null
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          phone?: string | null
+        }
+        Update: {
+          address?: string | null
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
+      recalc_bill: { Args: { _bill_id: string }; Returns: undefined }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "owner" | "driver" | "salesman"
+      correction_status: "pending" | "approved" | "rejected"
+      payment_mode: "cash" | "upi" | "bank_transfer" | "cheque"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +388,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["owner", "driver", "salesman"],
+      correction_status: ["pending", "approved", "rejected"],
+      payment_mode: ["cash", "upi", "bank_transfer", "cheque"],
+    },
   },
 } as const
