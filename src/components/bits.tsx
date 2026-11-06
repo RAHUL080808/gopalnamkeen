@@ -11,7 +11,8 @@ export function PageTitle({ title, action }: { title: string; action?: ReactNode
   );
 }
 
-export function StatusBadge({ status }: { status: string }) {
+export function StatusBadge({ status: s }: { status: string | null }) {
+  const status = s ?? "unpaid";
   return (
     <span
       className={cn(
