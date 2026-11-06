@@ -256,6 +256,7 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      owner_exists: { Args: never; Returns: boolean }
       recalc_bill: { Args: { _bill_id: string }; Returns: undefined }
     }
     Enums: {
