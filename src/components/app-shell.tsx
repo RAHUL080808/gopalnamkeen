@@ -1,4 +1,6 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+
+const OWNER_ONLY = ["/shops", "/bills", "/payments", "/team"];
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { Home, Store, FileText, IndianRupee, Users, HandCoins, History, LogOut, Wallet } from "lucide-react";
@@ -21,6 +23,7 @@ const STAFF_NAV = [
 export function AppShell({ children }: { children: ReactNode }) {
   const { data: me, isLoading } = useMe();
   const navigate = useNavigate();
+  const pathname = useLocation({ select: (l) => l.pathname });
   const qc = useQueryClient();
 
   async function signOut() {
@@ -66,6 +69,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             <h2 className="font-bold">No access</h2>
             <p className="mt-1 text-sm text-muted-foreground">Your account has no role yet. Ask the owner to add you as a driver or salesman.</p>
           </div>
+        ) : me.role !== "owner" && OWNER_ONLY.some((p) => pathname.startsWith(p)) ? (
+          <div className="rounded-xl border bg-card p-6 text-center text-sm text-muted-foreground">This page is for the owner only.</div>
         ) : (
           children
         )}
