@@ -36,10 +36,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const nav = me?.role === "owner" ? OWNER_NAV : STAFF_NAV;
 
   return (
-    <div className="min-h-screen bg-muted/40 pb-24 md:pb-8">
-      <header className="sticky top-0 z-20 bg-primary text-primary-foreground">
-        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-success-foreground">
+    <div className="min-h-screen bg-gradient-to-b from-muted/70 via-background to-muted/40 pb-24 md:pb-8">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-primary text-primary-foreground shadow-lg shadow-black/10">
+        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3.5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white ring-1 ring-white/20">
             <Wallet className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
@@ -61,7 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-5">
+      <main className="mx-auto max-w-5xl px-4 py-6 md:px-6 md:py-8">
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : !me?.role ? (
@@ -77,13 +77,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       </main>
 
       {me?.role && (
-        <nav className="fixed inset-x-0 bottom-0 z-20 border-t bg-card md:hidden">
-          <div className="mx-auto flex max-w-md">
+        <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border/70 bg-card/95 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] backdrop-blur-xl md:hidden">
+          <div className="mx-auto flex max-w-md px-1 pb-[env(safe-area-inset-bottom)]">
             {nav.map((n) => (
               <Link
                 key={n.to}
                 to={n.to}
-                className="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium text-muted-foreground"
+                className="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold text-muted-foreground transition-colors"
                 activeProps={{ className: "text-primary" }}
               >
                 <n.icon className="h-5 w-5" />
