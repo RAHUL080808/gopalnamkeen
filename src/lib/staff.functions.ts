@@ -34,3 +34,73 @@ export const createEmployee = createServerFn({ method: "POST" })
     if (rErr) throw new Error(rErr.message);
     return { id: created.user.id };
   });
+
+
+const updateSchema = z.object({
+  user_id: z.string().uuid(),
+  full_name: z.string().trim().min(2).max(80),
+  phone: z.string().trim().max(20).optional(),
+  role: z.enum(["driver", "salesman"]),
+  email: z.string().trim().email().max(255).optional().or(z.literal("")),
+  password: z.string().min(8).max(72).optional().or(z.literal("")),
+});
+
+export const updateEmployee = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => updateSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isOwner } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "owner",
+    });
+    if (!isOwner) throw new Error("Only the owner can edit employees");
+    if (data.user_id === context.userId) throw new Error("You cannot edit your own account here");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const attributes: { email?: string; password?: string } = {};
+    if (data.email) attributes.email = data.email;
+    if (data.password) attributes.password = data.password;
+    if (Object.keys(attributes).length) {
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, attributes);
+      if (error) throw new Error(error.message);
+    }
+
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .update({ full_name: data.full_name, phone: data.phone || null })
+      .eq("id", data.user_id);
+    if (profileError) throw new Error(profileError.message);
+
+    const { error: roleError } = await supabaseAdmin
+      .from("user_roles")
+      .update({ role: data.role })
+      .eq("user_id", data.user_id);
+    if (roleError) throw new Error(roleError.message);
+    return { success: true };
+  });
+
+export const deleteEmployee = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ user_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isOwner } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "owner",
+    });
+    if (!isOwner) throw new Error("Only the owner can remove employees");
+    if (data.user_id === context.userId) throw new Error("You cannot remove your own account");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error: roleError } = await supabaseAdmin
+      .from("user_roles")
+      .delete()
+      .eq("user_id", data.user_id)
+      .neq("role", "owner");
+    if (roleError) throw new Error(roleError.message);
+
+    const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+      ban_duration: "876000h",
+    });
+    if (banError) throw new Error(banError.message);
+    return { success: true };
+  });
