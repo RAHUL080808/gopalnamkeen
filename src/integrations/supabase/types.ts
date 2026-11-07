@@ -201,27 +201,42 @@ export type Database = {
       shops: {
         Row: {
           address: string | null
+          area: string | null
           contact_name: string | null
+          contact_person: string | null
           created_at: string
           id: string
+          incharge: string | null
+          mobile_number: string | null
           name: string
           phone: string | null
+          shop_name: string | null
         }
         Insert: {
           address?: string | null
+          area?: string | null
           contact_name?: string | null
+          contact_person?: string | null
           created_at?: string
           id?: string
+          incharge?: string | null
+          mobile_number?: string | null
           name: string
           phone?: string | null
+          shop_name?: string | null
         }
         Update: {
           address?: string | null
+          area?: string | null
           contact_name?: string | null
+          contact_person?: string | null
           created_at?: string
           id?: string
+          incharge?: string | null
+          mobile_number?: string | null
           name?: string
           phone?: string | null
+          shop_name?: string | null
         }
         Relationships: []
       }
@@ -255,6 +270,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_shops: { Args: { _rows: Json }; Returns: Json }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
       owner_exists: { Args: never; Returns: boolean }
       recalc_bill: { Args: { _bill_id: string }; Returns: undefined }
