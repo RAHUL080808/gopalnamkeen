@@ -28,3 +28,6 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- Shop imports parse Excel in the browser and use authenticated owner-checked server functions plus an RLS-bound SQL import function; a table lock serializes duplicate-mobile checks and inserts without updating existing shops.
+- Keep canonical import shop fields synchronized with legacy name/contact_name/phone fields using the database trigger so existing shop forms and dashboards remain compatible.
