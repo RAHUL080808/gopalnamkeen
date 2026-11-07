@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 type EditBill = { id: string; shop_id: string; bill_date: string; amount: number; notes: string | null; paid_amount: number };
 
@@ -66,5 +68,52 @@ export function BillDialog({ open, onOpenChange, shopId, bill }: { open: boolean
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+
+export function DeleteBillButton({ billId, billNumber }: { billId: string; billNumber: string }) {
+  const qc = useQueryClient();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const m = useMutation({
+    mutationFn: async () => {
+      const [{ data: direct, error: directError }, { data: allocated, error: allocatedError }] = await Promise.all([
+        supabase.from("payments").select("id").eq("bill_id", billId).limit(1),
+        (supabase.from("payment_allocations") as any).select("id").eq("bill_id", billId).limit(1),
+      ]);
+      if (directError) throw directError;
+      if (allocatedError) throw allocatedError;
+      if ((direct?.length ?? 0) > 0 || (allocated?.length ?? 0) > 0) {
+        throw new Error("Is bill par payment history hai. Payment history wale bill ko delete nahi kar sakte.");
+      }
+      const { error } = await supabase.from("bills").delete().eq("id", billId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Bill deleted");
+      qc.invalidateQueries();
+      setConfirmOpen(false);
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  return (
+    <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <Button type="button" variant="ghost" size="icon" aria-label="Delete bill" onClick={() => setConfirmOpen(true)}>
+        <Trash2 className="h-4 w-4 text-destructive" />
+      </Button>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete bill {billNumber}?</AlertDialogTitle>
+          <AlertDialogDescription>This action cannot be undone. Bills with payment history or advance allocations cannot be deleted.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction disabled={m.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => m.mutate()}>
+            {m.isPending ? "Deleting…" : "Delete bill"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
