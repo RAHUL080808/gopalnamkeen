@@ -46,7 +46,7 @@ function ShopsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-3xl border border-border/70 bg-gradient-to-br from-card to-muted/60 p-5 shadow-sm sm:p-6"><div className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Customer directory</div><PageTitle title="Shops" action={<Button className="rounded-xl shadow-md shadow-primary/15" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Add shop</Button>} /></div>
+      <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#132443] via-[#20395f] to-[#315477] p-5 text-white shadow-xl shadow-slate-900/10 sm:p-7"><div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full border-[25px] border-white/[0.06]" /><div className="relative flex items-end justify-between gap-3"><div><div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/55">Customer directory</div><h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Shops</h1><p className="mt-1 text-xs text-white/65">Manage retailer profiles and keep track of pending balances.</p></div><Button className="shrink-0 rounded-xl bg-white text-slate-900 shadow-lg hover:bg-slate-100" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Add shop</Button></div><div className="relative mt-5 flex gap-5 border-t border-white/10 pt-4"><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Total shops</div><div className="mt-1 text-xl font-extrabold tabular">{shops.length}</div></div><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Total outstanding</div><div className="mt-1 text-xl font-extrabold tabular text-amber-200">{inr(shops.reduce((sum, s) => sum + s.due, 0))}</div></div></div></div>
       {me?.role === "owner" && <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="h-4 w-4" /> Import Excel</Button>}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -55,9 +55,9 @@ function ShopsPage() {
       {list.length === 0 ? <Empty>No shops yet. Add your first shop.</Empty> : (
         <Card className="divide-y divide-border/60 overflow-hidden">
           {list.map((s) => (
-            <Link key={s.id} to="/shops/$id" params={{ id: s.id }} className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-muted/40">
+            <Link key={s.id} to="/shops/$id" params={{ id: s.id }} className="group flex items-center justify-between gap-3 p-4 transition-all hover:bg-primary/[0.035]">
               <div className="min-w-0">
-                <div className="truncate font-semibold">{s.name}</div>
+                <div className="truncate font-extrabold tracking-tight transition-colors group-hover:text-primary">{s.name}</div>
                 <div className="truncate text-xs text-muted-foreground">{[s.contact_name, s.phone].filter(Boolean).join(" · ") || "—"}</div>
               </div>
               <div className="shrink-0 text-right"><div className={`tabular font-bold ${s.due > 0 ? "text-destructive" : "text-success"}`}>{inr(s.due)}</div>{s.advance > 0 && <div className="text-[11px] font-medium text-primary">Advance {inr(s.advance)}</div>}</div>
