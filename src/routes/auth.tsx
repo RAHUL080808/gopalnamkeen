@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +9,7 @@ import { Label } from "@/components/ui/label";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — CreditBook" },
+      { title: "Sign in — Sai Sindhu Enterprises" },
       { name: "description", content: "Staff sign in for owner, drivers and salesmen." },
       { property: "og:title", content: "Sign in — CreditBook" },
       { property: "og:description", content: "Staff sign in for owner, drivers and salesmen." },
