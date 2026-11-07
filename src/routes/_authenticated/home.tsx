@@ -48,7 +48,7 @@ function OwnerDashboard() {
         unpaid: b.filter((x) => x.status !== "paid").length,
         employees: [...byEmp.values()].sort((a, z) => z.total - a.total),
         recent: p.slice(0, 8),
-        pendingCorrections: corrections.count ?? 0,
+        pendingCorrections: corrections.count ?? 0,\n        unallocatedAdvance: (advances.data ?? []).reduce((sum: number, x: any) => sum + Math.max(0, Number(x.amount) - (x.payment_allocations ?? []).reduce((a: number, y: any) => a + Number(y.amount), 0)), 0),
       };
     },
   });
@@ -56,10 +56,10 @@ function OwnerDashboard() {
   return (
     <div className="space-y-5">
       <PageTitle title="Overview" />
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Stat label="Total sales" value={inr(data?.sales)} tone="primary" />
         <Stat label="Received" value={inr(data?.received)} tone="success" />
-        <Stat label="Outstanding" value={inr(data?.outstanding)} tone="danger" />
+        <Stat label="Outstanding" value={inr(data?.outstanding)} tone="danger" />\n        <Stat label="Unallocated advance" value={inr(data?.unallocatedAdvance)} tone="primary" />
         <Stat label="Open bills" value={String(data?.unpaid ?? 0)} />
       </div>
 
