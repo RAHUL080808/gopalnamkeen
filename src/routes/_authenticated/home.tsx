@@ -56,9 +56,16 @@ function OwnerDashboard() {
   });
 
   return (
-    <div className="space-y-5">
-      <PageTitle title="Overview" />
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+    <div className="space-y-6">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary to-slate-800 p-5 text-primary-foreground shadow-xl shadow-primary/15 sm:p-7">
+        <div className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full border-[24px] border-white/5" />
+        <div className="relative">
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/65">Sai Sindhu Enterprises</div>
+          <h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Business overview</h1>
+          <p className="mt-1 text-sm text-white/70">Your collections and outstanding at a glance.</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-5">
         <Stat label="Total sales" value={inr(data?.sales)} tone="primary" />
         <Stat label="Received" value={inr(data?.received)} tone="success" />
         <Stat label="Outstanding" value={inr(data?.outstanding)} tone="danger" />
@@ -72,8 +79,8 @@ function OwnerDashboard() {
         </Link>
       )}
 
-      <section>
-        <h2 className="mb-2 text-sm font-bold text-muted-foreground">Collections by employee</h2>
+      <section className="space-y-3">
+        <div><h2 className="text-base font-extrabold tracking-tight">Collections by employee</h2><p className="mt-0.5 text-xs text-muted-foreground">Performance across your team</p></div>
         <Card className="divide-y">
           {data?.employees.length ? (
             data.employees.map((e) => (
@@ -91,8 +98,8 @@ function OwnerDashboard() {
         </Card>
       </section>
 
-      <section>
-        <h2 className="mb-2 text-sm font-bold text-muted-foreground">Recent payments</h2>
+      <section className="space-y-3">
+        <div><h2 className="text-base font-extrabold tracking-tight">Recent payments</h2><p className="mt-0.5 text-xs text-muted-foreground">Latest money received</p></div>
         <Card className="divide-y">
           {data?.recent.length ? (
             data.recent.map((p) => (
