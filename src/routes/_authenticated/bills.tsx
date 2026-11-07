@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Plus, Pencil, CalendarDays, ReceiptText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { inr, fmtDate } from "@/lib/format";
-import { Card, Empty, PageTitle, StatusBadge } from "@/components/bits";
+import { Card, Empty, StatusBadge } from "@/components/bits";
 import { Button } from "@/components/ui/button";
 import { BillDialog, DeleteBillButton } from "@/components/bill-dialog";
 import { useMe } from "@/lib/session";
