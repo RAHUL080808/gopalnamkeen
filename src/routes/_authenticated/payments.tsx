@@ -21,7 +21,7 @@ function PaymentsPage() {
   const navigate = Route.useNavigate();
   return (
     <div className="space-y-5">
-      <div className="rounded-3xl border border-border/70 bg-gradient-to-br from-card to-muted/60 p-5 shadow-sm sm:p-6"><div className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Money movement</div><PageTitle title="Payments" /></div>
+      <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#132443] via-[#20395f] to-[#315477] p-5 text-white shadow-xl shadow-slate-900/10 sm:p-7"><div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full border-[25px] border-white/[0.06]" /><div className="relative"><div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/55">Money movement</div><h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Payments</h1><p className="mt-1 text-xs text-white/65">Review collections, advances and payment correction requests.</p></div></div>
       <OwnerPaymentTools />
       <div className="flex gap-2 rounded-2xl border border-border/70 bg-muted/60 p-1.5">
         {(["all", "corrections"] as const).map((t) => (
@@ -44,7 +44,7 @@ function AllPayments() {
   return (
     <Card className="divide-y divide-border/60 overflow-hidden">
       {data.map((p) => (
-        <div key={p.id} className="flex items-start justify-between gap-3 p-4 transition-colors hover:bg-muted/40">
+        <div key={p.id} className="flex items-start justify-between gap-3 p-4 transition-all hover:bg-primary/[0.035]">
           <div className="min-w-0">
             <div className="truncate font-semibold">{p.shops?.name}</div>
             <div className="text-xs text-muted-foreground">{p.bills?.bill_number ?? "Without bill · Advance"} · {modeLabel(p.mode)}{p.reference ? ` · ${p.reference}` : ""}</div>
