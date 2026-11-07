@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 const OWNER_ONLY = ["/shops", "/bills", "/payments", "/team"];
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { Home, Store, FileText, IndianRupee, Users, HandCoins, History, LogOut, Wallet } from "lucide-react";
+import { Home, Store, FileText, IndianRupee, Users, HandCoins, History, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMe } from "@/lib/session";
 
@@ -44,7 +44,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-bold">{me?.name || "CreditBook"}</div>
-            <div className="text-xs capitalize opacity-75">{me?.role ?? (isLoading ? "…" : "no access")}</div>
+            <div className="text-xs capitalize opacity-75">Sai Sindhu Enterprises · {me?.role ?? (isLoading ? "…" : "no access")}</div>
           </div>
           {me?.role && (
             <nav className="hidden gap-1 md:flex">
