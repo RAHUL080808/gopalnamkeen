@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ElementType, ReactNode } from "react";
 import {
   ArrowDownToLine, ArrowUpRight, Banknote, CalendarDays, CheckCircle2,
-  Clock3, FileText, Plus, ReceiptText, Store, TrendingUp, Users, WalletCards,
+  Clock3, FileText, ReceiptText, Store, TrendingUp, Users, WalletCards,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMe } from "@/lib/session";
@@ -115,7 +115,7 @@ function OwnerDashboard() {
             <p className="mt-2 max-w-md text-sm leading-relaxed text-white/65">A clear view of your sales, collections and pending payments — all in one place.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link to="/bills" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-extrabold text-slate-900 shadow-lg transition hover:-translate-y-0.5 hover:bg-slate-100"><Plus className="h-4 w-4" /> View bills</Link>
+            <Link to="/bills" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-extrabold text-slate-900 shadow-lg transition hover:-translate-y-0.5 hover:bg-slate-100"><FileText className="h-4 w-4" /> View bills</Link>
             <Link to="/shops" className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-white/15"><Store className="h-4 w-4" /> Shops</Link>
           </div>
         </div>
