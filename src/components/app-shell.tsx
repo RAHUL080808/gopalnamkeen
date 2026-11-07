@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 const OWNER_ONLY = ["/shops", "/bills", "/payments", "/team"];
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { Home, Store, FileText, IndianRupee, Users, HandCoins, History, LogOut } from "lucide-react";
+import { Home, Store, FileText, IndianRupee, Users, HandCoins, History, LogOut, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMe } from "@/lib/session";
 
