@@ -51,11 +51,11 @@ function TeamPage() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-3xl border border-border/70 bg-gradient-to-br from-card to-muted/60 p-5 shadow-sm sm:p-6"><div className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">People & performance</div><PageTitle title="Team & collections" action={<Button className="rounded-xl shadow-md shadow-primary/15" onClick={() => setOpen(true)}><UserPlus className="h-4 w-4" /> Add</Button>} /></div>
+      <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#132443] via-[#20395f] to-[#315477] p-5 text-white shadow-xl shadow-slate-900/10 sm:p-7"><div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full border-[25px] border-white/[0.06]" /><div className="relative flex items-end justify-between gap-3"><div><div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/55">People & performance</div><h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Team & collections</h1><p className="mt-1 text-xs text-white/65">Manage your field team and track their collections.</p></div><Button className="shrink-0 rounded-xl bg-white text-slate-900 shadow-lg hover:bg-slate-100" onClick={() => setOpen(true)}><UserPlus className="h-4 w-4" /> Add member</Button></div><div className="relative mt-5 border-t border-white/10 pt-4"><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Active team members</div><div className="mt-1 text-xl font-extrabold tabular">{data.length}</div></div></div>
       {data.length === 0 ? <Empty>No drivers or salesmen yet.</Empty> : (
         <Card className="divide-y divide-border/60 overflow-hidden">
           {data.map((e) => (
-            <div key={e.id} className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-muted/40">
+            <div key={e.id} className="flex items-center justify-between gap-3 p-4 transition-all hover:bg-primary/[0.035]">
               <div className="min-w-0">
                 <div className="truncate font-semibold">{e.name}</div>
                 <div className="text-xs capitalize text-muted-foreground">{e.role}{e.phone ? ` · ${e.phone}` : ""} · {e.count} payments</div>
