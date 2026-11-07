@@ -5,9 +5,10 @@ import { useMe } from "@/lib/session";
 import { inr, fmtDateTime, modeLabel } from "@/lib/format";
 import { Card, PageTitle, Stat } from "@/components/bits";
 import { CollectPayment } from "@/components/collect-payment";
+import { pageMeta } from "@/lib/page-meta";
 
 export const Route = createFileRoute("/_authenticated/home")({
-  head: () => ({ meta: [{ title: "Dashboard — CreditBook" }] }),
+  head: () => pageMeta("Dashboard — CreditBook", "Track FMCG sales, received payments, outstanding credit and employee collections."),
   component: HomePage,
 });
 

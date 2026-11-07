@@ -9,6 +9,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Manage shop bills, payment collections and outstanding balances." },
       { property: "og:title", content: "CreditBook — FMCG Credit & Collections" },
       { property: "og:description", content: "Manage shop bills, payment collections and outstanding balances." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   beforeLoad: async () => {
