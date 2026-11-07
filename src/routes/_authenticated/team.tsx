@@ -6,7 +6,7 @@ import { UserPlus, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { createEmployee, updateEmployee, deleteEmployee } from "@/lib/staff.functions";
 import { inr } from "@/lib/format";
-import { Card, Empty, PageTitle } from "@/components/bits";
+import { Card, Empty } from "@/components/bits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
