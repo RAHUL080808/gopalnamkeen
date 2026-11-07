@@ -9,7 +9,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useMe } from "@/lib/session";
 import { inr, fmtDateTime, modeLabel } from "@/lib/format";
-import { Card } from "@/components/bits";
+import { Card, Empty } from "@/components/bits";
 import { CollectPayment } from "@/components/collect-payment";
 import { pageMeta } from "@/lib/page-meta";
 
