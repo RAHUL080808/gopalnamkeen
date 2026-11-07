@@ -12,10 +12,10 @@ import { cn } from "@/lib/utils";
 
 type Bill = { id: string; bill_number: string; bill_date: string; amount: number; paid_amount: number; balance: number; status: string; shop_id: string };
 
-export function CollectPayment() {
+export function CollectPayment({ initialShopId = null }: { initialShopId?: string | null }) {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
-  const [shopId, setShopId] = useState<string | null>(null);
+  const [shopId, setShopId] = useState<string | null>(initialShopId);
   const [bill, setBill] = useState<Bill | null>(null);
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState<PaymentMode>("cash");
