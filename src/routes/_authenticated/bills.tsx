@@ -38,7 +38,7 @@ function BillsPage() {
 
   return (
     <div className="space-y-5">
-      <PageTitle title="Bills" action={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> New bill</Button>} />
+      <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#132443] via-[#20395f] to-[#315477] p-5 text-white shadow-xl shadow-slate-900/10 sm:p-7"><div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full border-[25px] border-white/[0.06]" /><div className="relative flex items-end justify-between gap-3"><div><div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/55">Sales ledger</div><h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Bills</h1><p className="mt-1 text-xs text-white/65">Find invoices, review balances and manage bill records.</p></div><Button onClick={() => setOpen(true)} className="shrink-0 rounded-xl bg-white text-slate-900 shadow-lg hover:bg-slate-100"><Plus className="h-4 w-4" /> New bill</Button></div><div className="relative mt-5 flex gap-5 border-t border-white/10 pt-4"><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Total bills</div><div className="mt-1 text-xl font-extrabold tabular">{bills.length}</div></div><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Filtered results</div><div className="mt-1 text-xl font-extrabold tabular text-cyan-200">{list.length}</div></div><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Total balance</div><div className="mt-1 text-xl font-extrabold tabular text-amber-200">{inr(bills.reduce((sum, b) => sum + Number(b.balance), 0))}</div></div></div></div>
       <div className="flex gap-2 overflow-x-auto pb-1">
         {FILTERS.map((f) => (
           <button key={f.v} onClick={() => setFilter(f.v)} className={cn("shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition-all", filter === f.v ? "border-primary bg-primary text-primary-foreground shadow-sm" : "border-border/70 bg-card text-muted-foreground hover:bg-muted")}>{f.l}</button>
@@ -53,9 +53,9 @@ function BillsPage() {
       {list.length === 0 ? <Empty><div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-2xl bg-muted"><ReceiptText className="h-5 w-5" /></div><div className="font-semibold text-foreground">No bills found</div><div className="mt-1">Try another date or clear the filters.</div></Empty> : (
         <Card className="divide-y divide-border/70 overflow-hidden">
           {list.map((b) => (
-            <div key={b.id} className="flex items-center gap-3 p-4 transition-colors hover:bg-muted/40">
+            <div key={b.id} className="group flex items-center gap-3 p-4 transition-all hover:bg-primary/[0.035]">
               <Link to="/shops/$id" params={{ id: b.shop_id }} className="min-w-0 flex-1">
-                <div className="flex items-center gap-2"><span className="font-bold tracking-tight">{b.bill_number}</span><StatusBadge status={b.status} /></div>
+                <div className="flex items-center gap-2"><span className="font-extrabold tracking-tight transition-colors group-hover:text-primary">{b.bill_number}</span><StatusBadge status={b.status} /></div>
                 <div className="mt-1 truncate text-xs text-muted-foreground">{b.shops?.name} · {fmtDate(b.bill_date)}</div>
               </Link>
               <div className="shrink-0 text-right">
