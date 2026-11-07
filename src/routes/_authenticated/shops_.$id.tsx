@@ -34,7 +34,8 @@ function ShopDetail() {
   if (!data.shop) return <Empty>Shop not found.</Empty>;
   const { shop, bills, pays } = data;
   const total = bills.reduce((s, b) => s + Number(b.amount), 0);
-  const due = bills.reduce((s, b) => s + Number(b.balance), 0);\n  const unallocatedAdvance = pays.filter((p: any) => p.bill_id === null && !p.is_void).reduce((sum: number, p: any) => sum + Math.max(0, Number(p.amount) - (p.payment_allocations ?? []).reduce((a: number, x: any) => a + Number(x.amount), 0)), 0);
+  const due = bills.reduce((s, b) => s + Number(b.balance), 0);
+  const unallocatedAdvance = pays.filter((p: any) => p.bill_id === null && !p.is_void).reduce((sum: number, p: any) => sum + Math.max(0, Number(p.amount) - (p.payment_allocations ?? []).reduce((a: number, x: any) => a + Number(x.amount), 0)), 0);
 
   return (
     <div className="space-y-4">
@@ -49,7 +50,8 @@ function ShopDetail() {
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Stat label="Billed" value={inr(total)} tone="primary" />
         <Stat label="Received" value={inr(total - due)} tone="success" />
-        <Stat label="Due" value={inr(due)} tone="danger" />\n        <Stat label="Unallocated advance" value={inr(unallocatedAdvance)} tone="primary" />
+        <Stat label="Due" value={inr(due)} tone="danger" />
+        <Stat label="Unallocated advance" value={inr(unallocatedAdvance)} tone="primary" />
       </div>
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold text-muted-foreground">Bills</h2>
