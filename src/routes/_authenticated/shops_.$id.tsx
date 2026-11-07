@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { inr, fmtDate, fmtDateTime, modeLabel } from "@/lib/format";
 import { Card, Empty, Stat, StatusBadge } from "@/components/bits";
 import { Button } from "@/components/ui/button";
-import { BillDialog } from "@/components/bill-dialog";
+import { BillDialog, DeleteBillButton } from "@/components/bill-dialog";
 import { ShopDialog } from "./shops";
 import { pageMeta } from "@/lib/page-meta";
 import { useMe } from "@/lib/session";
@@ -96,6 +96,7 @@ function ShopDetail() {
             <div key={b.id} className="flex items-center justify-between gap-3 p-3">
               <div><div className="font-semibold">{b.bill_number}</div><div className="text-xs text-muted-foreground">{fmtDate(b.bill_date)} · {inr(b.amount)}</div></div>
               <div className="text-right"><div className="tabular font-bold">{inr(b.balance)}</div><StatusBadge status={b.status} /></div>
+              {me?.role === "owner" && <DeleteBillButton billId={b.id} billNumber={b.bill_number} />}
             </div>
           ))}
         </Card>
