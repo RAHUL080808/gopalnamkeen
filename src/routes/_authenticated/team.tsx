@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { UserPlus, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -121,7 +121,7 @@ function EditEmployee({ employee, onOpenChange }: { employee: any; onOpenChange:
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (employee) {
       setFullName(employee.name ?? "");
       setPhone(employee.phone ?? "");
