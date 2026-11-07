@@ -20,12 +20,12 @@ function PaymentsPage() {
   const { tab = "all" } = Route.useSearch();
   const navigate = Route.useNavigate();
   return (
-    <div className="space-y-3">
-      <PageTitle title="Payments" />
+    <div className="space-y-5">
+      <div className="rounded-3xl border border-border/70 bg-gradient-to-br from-card to-muted/60 p-5 shadow-sm sm:p-6"><div className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Money movement</div><PageTitle title="Payments" /></div>
       <OwnerPaymentTools />
-      <div className="flex gap-2">
+      <div className="flex gap-2 rounded-2xl border border-border/70 bg-muted/60 p-1.5">
         {(["all", "corrections"] as const).map((t) => (
-          <button key={t} onClick={() => navigate({ search: { tab: t } })} className={cn("rounded-full border px-3 py-1.5 text-sm font-medium", tab === t ? "border-primary bg-primary text-primary-foreground" : "bg-card")}>
+          <button key={t} onClick={() => navigate({ search: { tab: t } })} className={cn("rounded-xl border px-4 py-2 text-sm font-semibold transition-all", tab === t ? "border-primary bg-primary text-primary-foreground" : "bg-card")}>
             {t === "all" ? "All payments" : "Corrections"}
           </button>
         ))}
@@ -42,9 +42,9 @@ function AllPayments() {
   });
   if (!data.length) return <Empty>No payments yet.</Empty>;
   return (
-    <Card className="divide-y">
+    <Card className="divide-y divide-border/60 overflow-hidden">
       {data.map((p) => (
-        <div key={p.id} className="flex items-start justify-between gap-3 p-3">
+        <div key={p.id} className="flex items-start justify-between gap-3 p-4 transition-colors hover:bg-muted/40">
           <div className="min-w-0">
             <div className="truncate font-semibold">{p.shops?.name}</div>
             <div className="text-xs text-muted-foreground">{p.bills?.bill_number ?? "Without bill · Advance"} · {modeLabel(p.mode)}{p.reference ? ` · ${p.reference}` : ""}</div>
@@ -76,7 +76,7 @@ function Corrections() {
   return (
     <div className="space-y-3">
       {data.map((c) => (
-        <Card key={c.id} className="p-4">
+        <Card key={c.id} className="space-y-1 p-5 shadow-sm transition-shadow hover:shadow-md">
           <div className="flex items-center justify-between">
             <div className="font-semibold">{c.payments?.shops?.name} · {c.payments?.bills?.bill_number ?? "Without bill · Advance"}</div>
             <span className={cn("text-xs font-semibold capitalize", c.status === "pending" ? "text-warning-foreground" : c.status === "approved" ? "text-success" : "text-destructive")}>{c.status}</span>
