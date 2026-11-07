@@ -57,8 +57,8 @@ export const updateEmployee = createServerFn({ method: "POST" })
     if (data.user_id === context.userId) throw new Error("You cannot edit your own account here");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const attributes: { email?: string; password?: string } = {};
-    if (data.email) attributes.email = data.email;
+    const attributes: { email?: string; password?: string; email_confirm?: boolean } = {};
+    if (data.email) { attributes.email = data.email; attributes.email_confirm = true; }
     if (data.password) attributes.password = data.password;
     if (Object.keys(attributes).length) {
       const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, attributes);
