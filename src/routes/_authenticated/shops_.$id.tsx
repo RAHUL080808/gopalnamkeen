@@ -25,7 +25,7 @@ function ShopDetail() {
       const [{ data: shop }, { data: bills }, { data: pays }] = await Promise.all([
         supabase.from("shops").select("*").eq("id", id).maybeSingle(),
         supabase.from("bills").select("*").eq("shop_id", id).order("bill_date", { ascending: false }),
-        supabase.from("payments").select("id, amount, mode, paid_at, employee_name, is_void, bills(bill_number)").eq("shop_id", id).order("paid_at", { ascending: false }),
+        (supabase.from("payments") as any).select("id, bill_id, amount, mode, paid_at, employee_name, is_void, reference, remarks, bills(bill_number), payment_allocations(amount, bills(bill_number))").eq("shop_id", id).order("paid_at", { ascending: false }),
       ]);
       return { shop, bills: bills ?? [], pays: pays ?? [] };
     },
@@ -34,7 +34,7 @@ function ShopDetail() {
   if (!data.shop) return <Empty>Shop not found.</Empty>;
   const { shop, bills, pays } = data;
   const total = bills.reduce((s, b) => s + Number(b.amount), 0);
-  const due = bills.reduce((s, b) => s + Number(b.balance), 0);
+  const due = bills.reduce((s, b) => s + Number(b.balance), 0);\n  const unallocatedAdvance = pays.filter((p: any) => p.bill_id === null && !p.is_void).reduce((sum: number, p: any) => sum + Math.max(0, Number(p.amount) - (p.payment_allocations ?? []).reduce((a: number, x: any) => a + Number(x.amount), 0)), 0);
 
   return (
     <div className="space-y-4">
@@ -46,10 +46,10 @@ function ShopDetail() {
         </div>
         <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}><Pencil className="h-4 w-4" /> Edit</Button>
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Stat label="Billed" value={inr(total)} tone="primary" />
         <Stat label="Received" value={inr(total - due)} tone="success" />
-        <Stat label="Due" value={inr(due)} tone="danger" />
+        <Stat label="Due" value={inr(due)} tone="danger" />\n        <Stat label="Unallocated advance" value={inr(unallocatedAdvance)} tone="primary" />
       </div>
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold text-muted-foreground">Bills</h2>
@@ -70,7 +70,7 @@ function ShopDetail() {
         <Card className="divide-y">
           {pays.map((p) => (
             <div key={p.id} className="flex items-center justify-between gap-3 p-3">
-              <div><div className="text-sm font-semibold">{p.bills?.bill_number} · {modeLabel(p.mode)}</div><div className="text-xs text-muted-foreground">{p.employee_name} · {fmtDateTime(p.paid_at)}</div></div>
+              <div><div className="text-sm font-semibold">{p.bills?.bill_number ?? "Without bill · Advance"} · {modeLabel(p.mode)}</div><div className="text-xs text-muted-foreground">{p.employee_name} · {fmtDateTime(p.paid_at)}</div>{p.reference && <div className="text-xs text-muted-foreground">Ref: {p.reference}</div>}{p.remarks && <div className="text-xs text-muted-foreground">Remark: {p.remarks}</div>}{p.payment_allocations?.length > 0 && <div className="text-xs text-muted-foreground">Allocated: {p.payment_allocations.map((a: any) => `${a.bills?.bill_number ?? "Bill"} ${inr(a.amount)}`).join(" · ")}</div>}</div>
               <div className={`tabular font-bold ${p.is_void ? "text-muted-foreground line-through" : "text-success"}`}>{inr(p.amount)}</div>
             </div>
           ))}
