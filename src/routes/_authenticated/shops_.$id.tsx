@@ -67,28 +67,16 @@ function ShopDetail() {
   const unallocatedAdvance = pays.filter((p: any) => p.bill_id === null && !p.is_void).reduce((sum: number, p: any) => sum + Math.max(0, Number(p.amount) - (p.payment_allocations ?? []).reduce((a: number, x: any) => a + Number(x.amount), 0)), 0);
 
   return (
-    <div className="space-y-4">
-      <Link to="/shops" className="flex items-center gap-1 text-sm font-medium text-muted-foreground"><ChevronLeft className="h-4 w-4" /> Shops</Link>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-extrabold">{shop.name}</h1>
-          <p className="text-sm text-muted-foreground">{[shop.contact_name, shop.phone, shop.address].filter(Boolean).join(" · ")}</p>
-        </div>
-        {me?.role === "owner" && (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}><Pencil className="h-4 w-4" /> Edit</Button>
-            <Button variant="outline" size="sm" onClick={() => setDeleteShopOpen(true)}><Trash2 className="h-4 w-4 text-destructive" /> Delete</Button>
-          </div>
-        )}
-      </div>
+    <div className="space-y-5">
+      <section className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#132443] via-[#20395f] to-[#315477] p-5 text-white shadow-xl shadow-slate-900/10 sm:p-7"><div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full border-[25px] border-white/[0.06]" /><div className="relative"><Link to="/shops" className="inline-flex items-center gap-1 text-xs font-bold text-white/65 transition hover:text-white"><ChevronLeft className="h-4 w-4" /> Back to shops</Link><div className="mt-4 flex items-start justify-between gap-3"><div className="min-w-0"><div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/55">Retailer account</div><h1 className="mt-2 break-words text-2xl font-extrabold tracking-tight sm:text-3xl">{shop.name}</h1><p className="mt-1 text-xs leading-relaxed text-white/65">{[shop.contact_name, shop.phone, shop.address].filter(Boolean).join(" · ") || "No contact details added"}</p></div>{me?.role === "owner" && <div className="flex shrink-0 flex-col gap-2 sm:flex-row"><Button variant="outline" size="sm" className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white" onClick={() => setEditOpen(true)}><Pencil className="h-4 w-4" /> Edit</Button><Button variant="outline" size="sm" className="border-white/20 bg-white/10 text-white hover:bg-rose-500/20 hover:text-white" onClick={() => setDeleteShopOpen(true)}><Trash2 className="h-4 w-4" /> Delete</Button></div>}</div></div></section>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Stat label="Billed" value={inr(total)} tone="primary" />
         <Stat label="Received" value={inr(total - due)} tone="success" />
         <Stat label="Due" value={inr(due)} tone="danger" />
         <Stat label="Unallocated advance" value={inr(unallocatedAdvance)} tone="primary" />
       </div>
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-muted-foreground">Bills</h2>
+      <div className="flex items-center justify-between gap-3">
+        <div><h2 className="text-base font-extrabold tracking-tight">Bills</h2><p className="text-xs text-muted-foreground">Invoices and remaining balances</p></div>
         <Button size="sm" onClick={() => setBillOpen(true)}><Plus className="h-4 w-4" /> New bill</Button>
       </div>
       {bills.length === 0 ? <Empty>No bills yet.</Empty> : (
@@ -109,7 +97,7 @@ function ShopDetail() {
           ))}
         </Card>
       )}
-      <h2 className="text-sm font-bold text-muted-foreground">Payments</h2>
+      <div><h2 className="text-base font-extrabold tracking-tight">Payments</h2><p className="text-xs text-muted-foreground">Payment and advance history</p></div>
       {pays.length === 0 ? <Empty>No payments yet.</Empty> : (
         <Card className="divide-y">
           {pays.map((p) => (
