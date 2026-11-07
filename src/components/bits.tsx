@@ -4,8 +4,8 @@ import { STATUS_LABEL } from "@/lib/format";
 
 export function PageTitle({ title, action }: { title: string; action?: ReactNode }) {
   return (
-    <div className="mb-4 flex items-center justify-between gap-3">
-      <h1 className="text-xl font-extrabold tracking-tight">{title}</h1>
+    <div className="mb-5 flex items-center justify-between gap-3">
+      <h1 className="text-2xl font-extrabold tracking-tight text-foreground">{title}</h1>
       {action}
     </div>
   );
@@ -29,7 +29,7 @@ export function StatusBadge({ status: s }: { status: string | null }) {
 
 export function Stat({ label, value, tone }: { label: string; value: string; tone?: "success" | "danger" | "primary" }) {
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm shadow-black/[0.03]">
       <div className="text-xs font-medium text-muted-foreground">{label}</div>
       <div
         className={cn(
@@ -46,9 +46,9 @@ export function Stat({ label, value, tone }: { label: string; value: string; ton
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("rounded-xl border bg-card", className)}>{children}</div>;
+  return <div className={cn("rounded-2xl border border-border/70 bg-card shadow-sm shadow-black/[0.03]", className)}>{children}</div>;
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <div className="rounded-xl border border-dashed bg-card p-6 text-center text-sm text-muted-foreground">{children}</div>;
+  return <div className="rounded-2xl border border-dashed border-border bg-card/70 p-8 text-center text-sm text-muted-foreground">{children}</div>;
 }
