@@ -86,8 +86,9 @@ export function DeleteBillButton({ billId, billNumber }: { billId: string; billN
       if ((direct?.length ?? 0) > 0 || (allocated?.length ?? 0) > 0) {
         throw new Error("Is bill par payment history hai. Payment history wale bill ko delete nahi kar sakte.");
       }
-      const { error } = await supabase.from("bills").delete().eq("id", billId);
+      const { data: deletedBill, error } = await supabase.from("bills").delete().eq("id", billId).select("id").maybeSingle();
       if (error) throw error;
+      if (!deletedBill) throw new Error("Bill delete nahi hua. Database permission (RLS) ya bill access check karna hoga.");
     },
     onSuccess: () => {
       toast.success("Bill deleted");
