@@ -7,7 +7,7 @@ import { ShopImportDialog } from "@/components/shop-import-dialog";
 import { useMe } from "@/lib/session";
 import { supabase } from "@/integrations/supabase/client";
 import { inr } from "@/lib/format";
-import { Card, Empty, PageTitle } from "@/components/bits";
+import { Card, Empty } from "@/components/bits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
