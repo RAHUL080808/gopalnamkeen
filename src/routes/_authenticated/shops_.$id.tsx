@@ -1,7 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ChevronLeft, Pencil, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { ChevronLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { inr, fmtDate, fmtDateTime, modeLabel } from "@/lib/format";
 import { Card, Empty, Stat, StatusBadge } from "@/components/bits";
@@ -9,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { BillDialog } from "@/components/bill-dialog";
 import { ShopDialog } from "./shops";
 import { pageMeta } from "@/lib/page-meta";
+import { useMe } from "@/lib/session";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_authenticated/shops_/$id")({
   head: () => pageMeta("Shop details — CreditBook", "View a shop's contact details, bills, payments and outstanding credit."),
@@ -17,8 +20,33 @@ export const Route = createFileRoute("/_authenticated/shops_/$id")({
 
 function ShopDetail() {
   const { id } = Route.useParams();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const { data: me } = useMe();
   const [billOpen, setBillOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteShopOpen, setDeleteShopOpen] = useState(false);
+  const deleteShop = useMutation({
+    mutationFn: async () => {
+      const [{ data: existingBills, error: billsError }, { data: existingPayments, error: paymentsError }] = await Promise.all([
+        supabase.from("bills").select("id").eq("shop_id", id).limit(1),
+        supabase.from("payments").select("id").eq("shop_id", id).limit(1),
+      ]);
+      if (billsError) throw billsError;
+      if (paymentsError) throw paymentsError;
+      if ((existingBills?.length ?? 0) > 0 || (existingPayments?.length ?? 0) > 0) {
+        throw new Error("Is shop ke bills ya payment history maujood hai. Pehle records ka hisaab sambhale bina shop delete nahi ho sakti.");
+      }
+      const { error } = await supabase.from("shops").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      toast.success("Shop deleted");
+      await qc.invalidateQueries();
+      navigate({ to: "/shops" });
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
   const { data } = useQuery({
     queryKey: ["shop", id],
     queryFn: async () => {
@@ -45,7 +73,12 @@ function ShopDetail() {
           <h1 className="text-xl font-extrabold">{shop.name}</h1>
           <p className="text-sm text-muted-foreground">{[shop.contact_name, shop.phone, shop.address].filter(Boolean).join(" · ")}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}><Pencil className="h-4 w-4" /> Edit</Button>
+        {me?.role === "owner" && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}><Pencil className="h-4 w-4" /> Edit</Button>
+            <Button variant="outline" size="sm" onClick={() => setDeleteShopOpen(true)}><Trash2 className="h-4 w-4 text-destructive" /> Delete</Button>
+          </div>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Stat label="Billed" value={inr(total)} tone="primary" />
@@ -79,6 +112,20 @@ function ShopDetail() {
         </Card>
       )}
       <BillDialog open={billOpen} onOpenChange={setBillOpen} shopId={id} />
+      <AlertDialog open={deleteShopOpen} onOpenChange={setDeleteShopOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete shop {shop.name}?</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone. A shop can be deleted only when it has no bills and no payment history, so financial records remain safe.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={deleteShop.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteShop.mutate()}>
+              {deleteShop.isPending ? "Deleting…" : "Delete shop"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {editOpen && <ShopDialog open={editOpen} onOpenChange={setEditOpen} shop={{ id: shop.id, name: shop.name, contact_name: shop.contact_name ?? "", phone: shop.phone ?? "", address: shop.address ?? "" }} />}
     </div>
   );
