@@ -24,6 +24,7 @@ function ShopDetail() {
   const qc = useQueryClient();
   const { data: me } = useMe();
   const [billOpen, setBillOpen] = useState(false);
+  const [editBill, setEditBill] = useState<null | { id: string; shop_id: string; bill_date: string; amount: number; notes: string | null; paid_amount: number }>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteShopOpen, setDeleteShopOpen] = useState(false);
   const deleteShop = useMutation({
@@ -96,7 +97,14 @@ function ShopDetail() {
             <div key={b.id} className="flex items-center justify-between gap-3 p-3">
               <div><div className="font-semibold">{b.bill_number}</div><div className="text-xs text-muted-foreground">{fmtDate(b.bill_date)} · {inr(b.amount)}</div></div>
               <div className="text-right"><div className="tabular font-bold">{inr(b.balance)}</div><StatusBadge status={b.status} /></div>
-              {me?.role === "owner" && <DeleteBillButton billId={b.id} billNumber={b.bill_number} />}
+              {me?.role === "owner" && (
+                <div className="flex items-center gap-1">
+                  <Button type="button" variant="ghost" size="icon" aria-label="Edit bill" onClick={() => setEditBill(b)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <DeleteBillButton billId={b.id} billNumber={b.bill_number} />
+                </div>
+              )}
             </div>
           ))}
         </Card>
@@ -113,6 +121,7 @@ function ShopDetail() {
         </Card>
       )}
       <BillDialog open={billOpen} onOpenChange={setBillOpen} shopId={id} />
+      {editBill && <BillDialog key={editBill.id} open onOpenChange={(o) => !o && setEditBill(null)} bill={editBill} />}
       <AlertDialog open={deleteShopOpen} onOpenChange={setDeleteShopOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
