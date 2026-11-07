@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import React, { useState } from "react";
 import { toast } from "sonner";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { createEmployee } from "@/lib/staff.functions";
+import { createEmployee, updateEmployee, deleteEmployee } from "@/lib/staff.functions";
 import { inr } from "@/lib/format";
 import { Card, Empty, PageTitle } from "@/components/bits";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,13 @@ export const Route = createFileRoute("/_authenticated/team")({
 
 function TeamPage() {
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+  const qc = useQueryClient();
+  const remove = useMutation({
+    mutationFn: (user_id: string) => deleteEmployee({ data: { user_id } }),
+    onSuccess: () => { toast.success("Team member access removed. Payment history is preserved."); qc.invalidateQueries({ queryKey: ["team"] }); },
+    onError: (e) => toast.error((e as Error).message),
+  });
   const { data = [] } = useQuery({
     queryKey: ["team"],
     queryFn: async () => {
@@ -53,15 +60,20 @@ function TeamPage() {
                 <div className="truncate font-semibold">{e.name}</div>
                 <div className="text-xs capitalize text-muted-foreground">{e.role}{e.phone ? ` · ${e.phone}` : ""} · {e.count} payments</div>
               </div>
-              <div className="text-right">
-                <div className="tabular font-bold text-success">{inr(e.total)}</div>
-                <div className="tabular text-xs text-muted-foreground">Today {inr(e.today)}</div>
+              <div className="flex items-center gap-2">
+                <div className="text-right">
+                  <div className="tabular font-bold text-success">{inr(e.total)}</div>
+                  <div className="tabular text-xs text-muted-foreground">Today {inr(e.today)}</div>
+                </div>
+                <Button type="button" size="icon" variant="outline" aria-label="Edit team member" onClick={() => setEditing(e)}><Pencil className="h-4 w-4" /></Button>
+                <Button type="button" size="icon" variant="destructive" aria-label="Remove team member" disabled={remove.isPending} onClick={() => { if (window.confirm("Remove " + (e.name || "this team member") + "? They will lose app access, but payment history will remain.")) remove.mutate(e.id); }}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </div>
           ))}
         </Card>
       )}
       <AddEmployee open={open} onOpenChange={setOpen} />
+      <EditEmployee employee={editing} onOpenChange={(v) => { if (!v) setEditing(null); }} />
     </div>
   );
 }
@@ -95,6 +107,59 @@ function AddEmployee({ open, onOpenChange }: { open: boolean; onOpenChange: (o: 
           <div className="space-y-1.5"><Label>Password (min 8)</Label><Input type="text" required minLength={8} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></div>
           <Button type="submit" className="w-full" disabled={m.isPending}>{m.isPending ? "Creating…" : "Create account"}</Button>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+function EditEmployee({ employee, onOpenChange }: { employee: any; onOpenChange: (open: boolean) => void }) {
+  const qc = useQueryClient();
+  const [full_name, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [role, setRole] = useState<"driver" | "salesman">("driver");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  React.useEffect(() => {
+    if (employee) {
+      setFullName(employee.name ?? "");
+      setPhone(employee.phone ?? "");
+      setRole(employee.role === "salesman" ? "salesman" : "driver");
+      setEmail("");
+      setPassword("");
+    }
+  }, [employee]);
+
+  const mutation = useMutation({
+    mutationFn: () => updateEmployee({ data: {
+      user_id: employee.id, full_name, phone: phone || undefined, role,
+      email: email.trim() || undefined, password: password || undefined,
+    } }),
+    onSuccess: () => {
+      toast.success("Team member updated.");
+      qc.invalidateQueries({ queryKey: ["team"] });
+      onOpenChange(false);
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  return (
+    <Dialog open={!!employee} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Edit team member</DialogTitle></DialogHeader>
+        {employee && <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }}>
+          <div className="grid grid-cols-2 gap-2">
+            {(["driver", "salesman"] as const).map((r) => (
+              <button key={r} type="button" onClick={() => setRole(r)} className={"h-11 rounded-lg border text-sm font-semibold capitalize " + (role === r ? "border-primary bg-primary text-primary-foreground" : "bg-card")}>{r}</button>
+            ))}
+          </div>
+          <div className="space-y-1.5"><Label>Full name</Label><Input required minLength={2} maxLength={80} value={full_name} onChange={(e) => setFullName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Phone</Label><Input type="tel" maxLength={20} value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>New login email (optional)</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Leave blank to keep current email" /></div>
+          <div className="space-y-1.5"><Label>New password (optional)</Label><Input type="password" minLength={8} maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Leave blank to keep current password" /></div>
+          <Button type="submit" className="w-full" disabled={mutation.isPending}>{mutation.isPending ? "Saving…" : "Save changes"}</Button>
+        </form>}
       </DialogContent>
     </Dialog>
   );
