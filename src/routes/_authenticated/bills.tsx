@@ -25,6 +25,7 @@ const FILTERS = [
 
 function BillsPage() {
   const [filter, setFilter] = useState("all");
+  const [dateOrder, setDateOrder] = useState<"newest" | "oldest">("newest");
   const { data: me } = useMe();
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<null | { id: string; shop_id: string; bill_date: string; amount: number; notes: string | null; paid_amount: number }>(null);
@@ -32,7 +33,10 @@ function BillsPage() {
     queryKey: ["bills"],
     queryFn: async () => (await supabase.from("bills").select("*, shops(name)").order("bill_date", { ascending: false }).order("created_at", { ascending: false })).data ?? [],
   });
-  const list = filter === "all" ? bills : bills.filter((b) => b.status === filter);
+  const list = [...(filter === "all" ? bills : bills.filter((b) => b.status === filter))].sort((a, b) => {
+    const diff = new Date(a.bill_date).getTime() - new Date(b.bill_date).getTime();
+    return dateOrder === "newest" ? -diff : diff;
+  });
 
   return (
     <div className="space-y-3">
@@ -41,6 +45,13 @@ function BillsPage() {
         {FILTERS.map((f) => (
           <button key={f.v} onClick={() => setFilter(f.v)} className={cn("rounded-full border px-3 py-1.5 text-sm font-medium", filter === f.v ? "border-primary bg-primary text-primary-foreground" : "bg-card")}>{f.l}</button>
         ))}
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm text-muted-foreground">Sort by bill date</span>
+        <div className="flex gap-1">
+          <button onClick={() => setDateOrder("newest")} className={cn("rounded-md border px-3 py-1.5 text-xs font-medium", dateOrder === "newest" ? "border-primary bg-primary text-primary-foreground" : "bg-card")}>Newest first</button>
+          <button onClick={() => setDateOrder("oldest")} className={cn("rounded-md border px-3 py-1.5 text-xs font-medium", dateOrder === "oldest" ? "border-primary bg-primary text-primary-foreground" : "bg-card")}>Oldest first</button>
+        </div>
       </div>
       {list.length === 0 ? <Empty>No bills.</Empty> : (
         <Card className="divide-y">
