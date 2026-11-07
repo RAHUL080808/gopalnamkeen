@@ -25,7 +25,7 @@ const FILTERS = [
 
 function BillsPage() {
   const [filter, setFilter] = useState("all");
-  const [dateOrder, setDateOrder] = useState<"newest" | "oldest">("newest");
+  const [selectedDate, setSelectedDate] = useState("");
   const { data: me } = useMe();
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<null | { id: string; shop_id: string; bill_date: string; amount: number; notes: string | null; paid_amount: number }>(null);
@@ -33,10 +33,8 @@ function BillsPage() {
     queryKey: ["bills"],
     queryFn: async () => (await supabase.from("bills").select("*, shops(name)").order("bill_date", { ascending: false }).order("created_at", { ascending: false })).data ?? [],
   });
-  const list = [...(filter === "all" ? bills : bills.filter((b) => b.status === filter))].sort((a, b) => {
-    const diff = new Date(a.bill_date).getTime() - new Date(b.bill_date).getTime();
-    return dateOrder === "newest" ? -diff : diff;
-  });
+  const list = [...(filter === "all" ? bills : bills.filter((b) => b.status === filter))]
+    .filter((b) => !selectedDate || b.bill_date === selectedDate);
 
   return (
     <div className="space-y-3">
@@ -46,12 +44,11 @@ function BillsPage() {
           <button key={f.v} onClick={() => setFilter(f.v)} className={cn("rounded-full border px-3 py-1.5 text-sm font-medium", filter === f.v ? "border-primary bg-primary text-primary-foreground" : "bg-card")}>{f.l}</button>
         ))}
       </div>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm text-muted-foreground">Sort by bill date</span>
-        <div className="flex gap-1">
-          <button onClick={() => setDateOrder("newest")} className={cn("rounded-md border px-3 py-1.5 text-xs font-medium", dateOrder === "newest" ? "border-primary bg-primary text-primary-foreground" : "bg-card")}>Newest first</button>
-          <button onClick={() => setDateOrder("oldest")} className={cn("rounded-md border px-3 py-1.5 text-xs font-medium", dateOrder === "oldest" ? "border-primary bg-primary text-primary-foreground" : "bg-card")}>Oldest first</button>
-        </div>
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3">
+        <label htmlFor="bill-date-filter" className="text-sm font-medium">Filter by date</label>
+        <input id="bill-date-filter" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="min-w-0 rounded-md border bg-background px-3 py-2 text-sm" />
+        <button onClick={() => setSelectedDate(new Date().toLocaleDateString("en-CA"))} className={cn("rounded-md border px-3 py-2 text-xs font-medium", selectedDate === new Date().toLocaleDateString("en-CA") ? "border-primary bg-primary text-primary-foreground" : "bg-background")}>Today</button>
+        <button onClick={() => setSelectedDate("")} className={cn("rounded-md border px-3 py-2 text-xs font-medium", !selectedDate ? "border-primary bg-primary text-primary-foreground" : "bg-background")}>All dates</button>
       </div>
       {list.length === 0 ? <Empty>No bills.</Empty> : (
         <Card className="divide-y">
