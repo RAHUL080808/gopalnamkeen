@@ -2,7 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Upload } from "lucide-react";
+import { ShopImportDialog } from "@/components/shop-import-dialog";
+import { useMe } from "@/lib/session";
 import { supabase } from "@/integrations/supabase/client";
 import { inr } from "@/lib/format";
 import { Card, Empty, PageTitle } from "@/components/bits";
@@ -12,7 +14,14 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/shops")({
-  head: () => ({ meta: [{ title: "Shops — CreditBook" }] }),
+  head: () => ({ meta: [
+    { title: "Shops — CreditBook" },
+    { name: "description", content: "Manage shops, outstanding balances and owner-only Excel shop imports." },
+    { property: "og:title", content: "Shops — CreditBook" },
+    { property: "og:description", content: "Manage shops, outstanding balances and owner-only Excel shop imports." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: ShopsPage,
 });
 
@@ -21,6 +30,8 @@ export type ShopForm = { name: string; contact_name: string; phone: string; addr
 function ShopsPage() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const { data: me } = useMe();
   const { data: shops = [] } = useQuery({
     queryKey: ["shops"],
     queryFn: async () => {
@@ -36,6 +47,7 @@ function ShopsPage() {
   return (
     <div className="space-y-3">
       <PageTitle title="Shops" action={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Add shop</Button>} />
+      {me?.role === "owner" && <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="h-4 w-4" /> Import Excel</Button>}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input placeholder="Search shop" value={q} onChange={(e) => setQ(e.target.value)} className="h-11 pl-9" />
@@ -54,6 +66,7 @@ function ShopsPage() {
         </Card>
       )}
       <ShopDialog open={open} onOpenChange={setOpen} />
+      {me?.role === "owner" && <ShopImportDialog open={importOpen} onOpenChange={setImportOpen} />}
     </div>
   );
 }

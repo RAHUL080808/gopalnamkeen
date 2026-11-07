@@ -8,9 +8,10 @@ import { Card, Empty, Stat, StatusBadge } from "@/components/bits";
 import { Button } from "@/components/ui/button";
 import { BillDialog } from "@/components/bill-dialog";
 import { ShopDialog } from "./shops";
+import { pageMeta } from "@/lib/page-meta";
 
 export const Route = createFileRoute("/_authenticated/shops_/$id")({
-  head: () => ({ meta: [{ title: "Shop details — CreditBook" }] }),
+  head: () => pageMeta("Shop details — CreditBook", "View a shop's contact details, bills, payments and outstanding credit."),
   component: ShopDetail,
 });
 

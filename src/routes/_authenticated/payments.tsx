@@ -7,10 +7,11 @@ import { inr, fmtDateTime, modeLabel } from "@/lib/format";
 import { Card, Empty, PageTitle } from "@/components/bits";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { pageMeta } from "@/lib/page-meta";
 
 export const Route = createFileRoute("/_authenticated/payments")({
   validateSearch: z.object({ tab: z.enum(["all", "corrections"]).optional() }),
-  head: () => ({ meta: [{ title: "Payments — CreditBook" }] }),
+  head: () => pageMeta("Payments — CreditBook", "Review shop payments and approve or reject payment corrections."),
   component: PaymentsPage,
 });
 
