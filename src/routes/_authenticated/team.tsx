@@ -50,12 +50,12 @@ function TeamPage() {
   });
 
   return (
-    <div className="space-y-3">
-      <PageTitle title="Team & collections" action={<Button onClick={() => setOpen(true)}><UserPlus className="h-4 w-4" /> Add</Button>} />
+    <div className="space-y-5">
+      <div className="rounded-3xl border border-border/70 bg-gradient-to-br from-card to-muted/60 p-5 shadow-sm sm:p-6"><div className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">People & performance</div><PageTitle title="Team & collections" action={<Button className="rounded-xl shadow-md shadow-primary/15" onClick={() => setOpen(true)}><UserPlus className="h-4 w-4" /> Add</Button>} /></div>
       {data.length === 0 ? <Empty>No drivers or salesmen yet.</Empty> : (
-        <Card className="divide-y">
+        <Card className="divide-y divide-border/60 overflow-hidden">
           {data.map((e) => (
-            <div key={e.id} className="flex items-center justify-between gap-3 p-4">
+            <div key={e.id} className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-muted/40">
               <div className="min-w-0">
                 <div className="truncate font-semibold">{e.name}</div>
                 <div className="text-xs capitalize text-muted-foreground">{e.role}{e.phone ? ` · ${e.phone}` : ""} · {e.count} payments</div>
