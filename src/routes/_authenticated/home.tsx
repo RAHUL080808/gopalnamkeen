@@ -21,7 +21,17 @@ export const Route = createFileRoute("/_authenticated/home")({
 function HomePage() {
   const { data: me } = useMe();
   if (me?.role === "owner") return <OwnerDashboard />;
-  return <StaffDashboard />;
+  if (me?.role === "driver") return <StaffDashboard />;
+  return (
+    <div className="space-y-4">
+      <div className="rounded-3xl bg-gradient-to-br from-primary via-primary to-slate-800 p-5 text-primary-foreground shadow-xl shadow-primary/15 sm:p-7">
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">Sai Sindhu Enterprises</p>
+        <h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Collect payment</h1>
+        <p className="mt-1 text-sm text-white/70">Find a shop and record the payment received.</p>
+      </div>
+      <CollectPayment />
+    </div>
+  );
 }
 
 function StaffDashboard() {
