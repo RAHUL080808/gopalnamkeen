@@ -60,7 +60,7 @@ function ShopsPage() {
                 <div className="truncate font-semibold">{s.name}</div>
                 <div className="truncate text-xs text-muted-foreground">{[s.contact_name, s.phone].filter(Boolean).join(" · ") || "—"}</div>
               </div>
-              <div className={`tabular shrink-0 font-bold ${s.due > 0 ? "text-destructive" : "text-success"}`}>{inr(s.due)}</div>
+              <div className="shrink-0 text-right"><div className={`tabular font-bold ${s.due > 0 ? "text-destructive" : "text-success"}`}>{inr(s.due)}</div>{s.advance > 0 && <div className="text-[11px] font-medium text-primary">Advance {inr(s.advance)}</div>}</div>
             </Link>
           ))}
         </Card>
