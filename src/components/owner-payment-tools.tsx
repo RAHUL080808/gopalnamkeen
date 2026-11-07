@@ -1,0 +1,168 @@
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Plus, ArrowRightLeft } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { inr, fmtDateTime, MODES, type PaymentMode } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+type Shop = { id: string; name: string };
+type Bill = { id: string; bill_number: string; amount: number; balance: number; shop_id: string };
+type Advance = { id: string; shop_id: string; amount: number; paid_at: string; remarks: string | null; reference: string | null; shops: { name: string } | null; payment_allocations: { amount: number }[] };
+
+export function OwnerPaymentTools() {
+  const qc = useQueryClient();
+  const [addOpen, setAddOpen] = useState(false);
+  const [allocateOpen, setAllocateOpen] = useState(false);
+  const [shopId, setShopId] = useState("");
+  const [billId, setBillId] = useState("advance");
+  const [amount, setAmount] = useState("");
+  const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 16));
+  const [mode, setMode] = useState<PaymentMode>("cash");
+  const [reference, setReference] = useState("");
+  const [remarks, setRemarks] = useState("");
+
+  const { data: shops = [] } = useQuery({
+    queryKey: ["owner-payment-shops"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("shops").select("id,name").order("name");
+      if (error) throw error;
+      return (data ?? []) as Shop[];
+    },
+  });
+  const { data: bills = [] } = useQuery({
+    queryKey: ["owner-payment-bills"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("bills").select("id,bill_number,amount,balance,shop_id").gt("balance", 0).order("bill_date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Bill[];
+    },
+  });
+  const { data: advances = [] } = useQuery({
+    queryKey: ["owner-advances"],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("payments") as any)
+        .select("id,shop_id,amount,paid_at,remarks,reference,shops(name),payment_allocations(amount)")
+        .is("bill_id", null).eq("is_void", false).order("paid_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Advance[];
+    },
+  });
+  const selectedShopBills = useMemo(() => bills.filter(b => b.shop_id === shopId), [bills, shopId]);
+
+  const addPayment = useMutation({
+    mutationFn: async () => {
+      const value = Number(amount);
+      if (!shopId) throw new Error("Select a shop");
+      if (!(value > 0)) throw new Error("Enter a valid amount");
+      if (!paidAt) throw new Error("Select payment date and time");
+      const chosenBill = billId !== "advance" ? bills.find(b => b.id === billId) : null;
+      if (billId !== "advance" && !chosenBill) throw new Error("Select a valid bill");
+      if (chosenBill && value > Number(chosenBill.balance)) throw new Error("Amount cannot exceed bill balance");
+      const { error } = await (supabase.from("payments") as any).insert({
+        shop_id: shopId, bill_id: chosenBill?.id ?? null, amount: value, mode,
+        paid_at: new Date(paidAt).toISOString(), reference: reference.trim() || null,
+        remarks: remarks.trim() || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Payment recorded");
+      setAddOpen(false); setShopId(""); setBillId("advance"); setAmount("");
+      setReference(""); setRemarks(""); setMode("cash"); setPaidAt(new Date().toISOString().slice(0, 16));
+      qc.invalidateQueries();
+    },
+    onError: e => toast.error((e as Error).message),
+  });
+
+  const [allocPayment, setAllocPayment] = useState("");
+  const [allocBill, setAllocBill] = useState("");
+  const [allocAmount, setAllocAmount] = useState("");
+  const chosenAdvance = advances.find(a => a.id === allocPayment);
+  const allocated = chosenAdvance?.payment_allocations.reduce((s, x) => s + Number(x.amount), 0) ?? 0;
+  const unallocated = chosenAdvance ? Number(chosenAdvance.amount) - allocated : 0;
+  const advanceBills = chosenAdvance ? bills.filter(b => b.shop_id === chosenAdvance.shop_id) : [];
+
+  const allocate = useMutation({
+    mutationFn: async () => {
+      const value = Number(allocAmount);
+      if (!allocPayment || !allocBill) throw new Error("Select advance and bill");
+      if (!(value > 0) || value > unallocated) throw new Error("Enter an amount within the unallocated advance");
+      const target = advanceBills.find(b => b.id === allocBill);
+      if (!target || value > Number(target.balance)) throw new Error("Amount cannot exceed this bill's balance");
+      const { error } = await (supabase.from("payment_allocations") as any).insert({ payment_id: allocPayment, bill_id: allocBill, amount: value });
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Advance allocated"); setAllocAmount(""); setAllocBill(""); qc.invalidateQueries(); },
+    onError: e => toast.error((e as Error).message),
+  });
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Add payment</Button>
+      <Button variant="outline" onClick={() => setAllocateOpen(true)}><ArrowRightLeft className="h-4 w-4" /> Allocate advance</Button>
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Record shop payment</DialogTitle></DialogHeader>
+          <form className="space-y-3" onSubmit={e => { e.preventDefault(); addPayment.mutate(); }}>
+            <div className="space-y-1.5"><Label>Shop</Label>
+              <Select value={shopId} onValueChange={v => { setShopId(v); setBillId("advance"); }}>
+                <SelectTrigger><SelectValue placeholder="Choose shop" /></SelectTrigger>
+                <SelectContent>{shops.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5"><Label>Payment for</Label>
+              <Select value={billId} onValueChange={setBillId}>
+                <SelectTrigger><SelectValue placeholder="Choose bill or advance" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="advance">Without bill (shop advance)</SelectItem>
+                  {selectedShopBills.map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5"><Label>Amount (₹)</Label><Input type="number" min="0.01" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Date and time</Label><Input type="datetime-local" required value={paidAt} onChange={e => setPaidAt(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Payment mode</Label>
+              <Select value={mode} onValueChange={v => setMode(v as PaymentMode)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{MODES.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent></Select>
+            </div>
+            <div className="space-y-1.5"><Label>Reference (optional)</Label><Input value={reference} maxLength={100} onChange={e => setReference(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Remarks (optional)</Label><Textarea value={remarks} maxLength={500} onChange={e => setRemarks(e.target.value)} /></div>
+            <Button className="w-full" type="submit" disabled={addPayment.isPending}>{addPayment.isPending ? "Saving…" : "Save payment"}</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={allocateOpen} onOpenChange={setAllocateOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Allocate shop advance</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5"><Label>Advance payment</Label>
+              <Select value={allocPayment} onValueChange={v => { setAllocPayment(v); setAllocBill(""); setAllocAmount(""); }}>
+                <SelectTrigger><SelectValue placeholder="Choose advance" /></SelectTrigger>
+                <SelectContent>{advances.map(a => {
+                  const left = Number(a.amount) - a.payment_allocations.reduce((s,x) => s + Number(x.amount),0);
+                  return left > 0 ? <SelectItem key={a.id} value={a.id}>{a.shops?.name ?? "Shop"} · {inr(left)} available · {fmtDateTime(a.paid_at)}</SelectItem> : null;
+                })}</SelectContent>
+              </Select>
+            </div>
+            {chosenAdvance && <>
+              <p className="rounded-lg bg-muted p-3 text-sm">Received {inr(chosenAdvance.amount)} · Allocated {inr(allocated)} · <b>Available {inr(unallocated)}</b></p>
+              <div className="space-y-1.5"><Label>Bill (same shop only)</Label>
+                <Select value={allocBill} onValueChange={setAllocBill}><SelectTrigger><SelectValue placeholder="Choose bill" /></SelectTrigger><SelectContent>{advanceBills.map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}</SelectContent></Select>
+              </div>
+              <div className="space-y-1.5"><Label>Amount to allocate (₹)</Label><Input type="number" min="0.01" max={Math.min(unallocated, Number(advanceBills.find(b=>b.id===allocBill)?.balance ?? 0))} step="0.01" value={allocAmount} onChange={e=>setAllocAmount(e.target.value)} /></div>
+              <Button className="w-full" disabled={allocate.isPending} onClick={() => allocate.mutate()}>{allocate.isPending ? "Allocating…" : "Allocate to bill"}</Button>
+            </>}
+            {advances.length === 0 && <p className="text-sm text-muted-foreground">No shop advances recorded yet.</p>}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
