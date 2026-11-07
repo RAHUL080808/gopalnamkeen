@@ -6,7 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { inr, fmtDate } from "@/lib/format";
 import { Card, Empty, PageTitle, StatusBadge } from "@/components/bits";
 import { Button } from "@/components/ui/button";
-import { BillDialog } from "@/components/bill-dialog";
+import { BillDialog, DeleteBillButton } from "@/components/bill-dialog";
+import { useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { pageMeta } from "@/lib/page-meta";
 
@@ -24,6 +25,7 @@ const FILTERS = [
 
 function BillsPage() {
   const [filter, setFilter] = useState("all");
+  const { data: me } = useMe();
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<null | { id: string; shop_id: string; bill_date: string; amount: number; notes: string | null; paid_amount: number }>(null);
   const { data: bills = [] } = useQuery({
@@ -52,7 +54,12 @@ function BillsPage() {
                 <div className="tabular text-sm font-bold">{inr(b.amount)}</div>
                 <div className="tabular text-xs text-destructive">Bal {inr(b.balance)}</div>
               </div>
-              <button aria-label="Edit bill" onClick={() => setEdit(b)} className="p-1 text-muted-foreground"><Pencil className="h-4 w-4" /></button>
+              {me?.role === "owner" && (
+                <div className="flex items-center gap-1">
+                  <button aria-label="Edit bill" onClick={() => setEdit(b)} className="p-1 text-muted-foreground"><Pencil className="h-4 w-4" /></button>
+                  <DeleteBillButton billId={b.id} billNumber={b.bill_number} />
+                </div>
+              )}
             </div>
           ))}
         </Card>
