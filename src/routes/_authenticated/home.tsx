@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import type { ElementType, ReactNode } from "react";
+import { useState } from "react";
 import {
   ArrowDownToLine, ArrowUpRight, Banknote, CalendarDays, CheckCircle2,
-  Clock3, FileText, ReceiptText, Store, TrendingUp, Users, WalletCards,
+  Clock3, FileText, ReceiptText, Store, TrendingUp, Users, WalletCards, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMe } from "@/lib/session";
@@ -20,14 +21,76 @@ export const Route = createFileRoute("/_authenticated/home")({
 function HomePage() {
   const { data: me } = useMe();
   if (me?.role === "owner") return <OwnerDashboard />;
+  return <StaffDashboard />;
+}
+
+function StaffDashboard() {
+  const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
+  const today = new Date().toLocaleDateString("en-CA");
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ["staff-todays-orders", today],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bills")
+        .select("id, bill_number, bill_date, amount, balance, shop_id, shops(id, name)")
+        .eq("bill_date", today)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      const grouped = new Map<string, { id: string; name: string; bills: any[]; total: number; due: number }>();
+      for (const bill of data ?? []) {
+        const shop = bill.shops as unknown as { id: string; name: string } | null;
+        if (!shop) continue;
+        const item = grouped.get(shop.id) ?? { id: shop.id, name: shop.name, bills: [], total: 0, due: 0 };
+        item.bills.push(bill);
+        item.total += Number(bill.amount);
+        item.due += Number(bill.balance);
+        grouped.set(shop.id, item);
+      }
+      return [...grouped.values()].sort((a, b) => a.name.localeCompare(b.name));
+    },
+  });
+  const selectedShop = orders.find((shop) => shop.id === selectedShopId);
+
   return (
-    <div className="space-y-4">
-      <div className="rounded-3xl bg-gradient-to-br from-primary via-primary to-slate-800 p-5 text-primary-foreground shadow-xl shadow-primary/15 sm:p-7">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">Sai Sindhu Enterprises</p>
-        <h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Collect payment</h1>
-        <p className="mt-1 text-sm text-white/70">Find a shop and record the payment received.</p>
-      </div>
-      <CollectPayment />
+    <div className="space-y-5">
+      <section className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#132443] via-[#20395f] to-[#315477] p-5 text-white shadow-xl shadow-slate-900/10 sm:p-7">
+        <div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full border-[25px] border-white/[0.06]" />
+        <div className="relative">
+          <div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/55">Sai Sindhu Enterprises · Driver desk</div>
+          <h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Today's orders</h1>
+          <p className="mt-1 text-xs text-white/65">Bills added by the owner for today. Open a shop to see today's and older pending bills.</p>
+          <div className="mt-5 flex items-center gap-5 border-t border-white/10 pt-4">
+            <div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Shops with orders</div><div className="mt-1 text-xl font-extrabold tabular">{isLoading ? "—" : orders.length}</div></div>
+            <div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Today's bills</div><div className="mt-1 text-xl font-extrabold tabular">{isLoading ? "—" : orders.reduce((sum, shop) => sum + shop.bills.length, 0)}</div></div>
+          </div>
+        </div>
+      </section>
+
+      {selectedShopId ? (
+        <div className="space-y-3">
+          <button onClick={() => setSelectedShopId(null)} className="inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Back to today's orders</button>
+          <div><h2 className="text-lg font-extrabold">{selectedShop?.name ?? "Shop bills"}</h2><p className="text-xs text-muted-foreground">Today's bills and all older pending bills</p></div>
+          <CollectPayment key={selectedShopId} initialShopId={selectedShopId} />
+        </div>
+      ) : (
+        <>
+          <section className="space-y-3">
+            <div className="flex items-end justify-between gap-3"><div><h2 className="text-base font-extrabold tracking-tight">Shops with orders today</h2><p className="mt-0.5 text-xs text-muted-foreground">Based on the bill date entered by the owner</p></div><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{orders.length} shops</span></div>
+            {isLoading ? <Card className="p-5 text-sm text-muted-foreground">Loading today's orders…</Card> : orders.length === 0 ? <Empty>No bills dated today yet.</Empty> : (
+              <Card className="divide-y divide-border/70 overflow-hidden">
+                {orders.map((shop) => (
+                  <button key={shop.id} onClick={() => setSelectedShopId(shop.id)} className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-primary/[0.035]">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Store className="h-5 w-5" /></span>
+                    <span className="min-w-0 flex-1"><span className="block truncate text-sm font-extrabold">{shop.name}</span><span className="mt-1 block text-xs text-muted-foreground">{shop.bills.length} today's bill(s) · Total {inr(shop.total)}</span><span className="mt-0.5 block text-[11px] font-semibold text-destructive">Outstanding: {inr(shop.due)}</span></span>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+                  </button>
+                ))}
+              </Card>
+            )}
+          </section>
+          <section className="space-y-3"><div><h2 className="text-base font-extrabold tracking-tight">Collect payment from any shop</h2><p className="mt-0.5 text-xs text-muted-foreground">For old pending bills or payments without a new order</p></div><CollectPayment /></section>
+        </>
+      )}
     </div>
   );
 }
