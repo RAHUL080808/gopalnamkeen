@@ -45,17 +45,17 @@ function ShopsPage() {
   const list = useMemo(() => shops.filter((s) => s.name.toLowerCase().includes(q.toLowerCase())), [shops, q]);
 
   return (
-    <div className="space-y-3">
-      <PageTitle title="Shops" action={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Add shop</Button>} />
+    <div className="space-y-5">
+      <div className="rounded-3xl border border-border/70 bg-gradient-to-br from-card to-muted/60 p-5 shadow-sm sm:p-6"><div className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Customer directory</div><PageTitle title="Shops" action={<Button className="rounded-xl shadow-md shadow-primary/15" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Add shop</Button>} /></div>
       {me?.role === "owner" && <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="h-4 w-4" /> Import Excel</Button>}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input placeholder="Search shop" value={q} onChange={(e) => setQ(e.target.value)} className="h-11 pl-9" />
+        <Input placeholder="Search shop" value={q} onChange={(e) => setQ(e.target.value)} className="h-12 rounded-2xl border-border/70 bg-card pl-10 shadow-sm focus-visible:ring-primary/20" />
       </div>
       {list.length === 0 ? <Empty>No shops yet. Add your first shop.</Empty> : (
-        <Card className="divide-y">
+        <Card className="divide-y divide-border/60 overflow-hidden">
           {list.map((s) => (
-            <Link key={s.id} to="/shops/$id" params={{ id: s.id }} className="flex items-center justify-between gap-3 p-4">
+            <Link key={s.id} to="/shops/$id" params={{ id: s.id }} className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-muted/40">
               <div className="min-w-0">
                 <div className="truncate font-semibold">{s.name}</div>
                 <div className="truncate text-xs text-muted-foreground">{[s.contact_name, s.phone].filter(Boolean).join(" · ") || "—"}</div>
