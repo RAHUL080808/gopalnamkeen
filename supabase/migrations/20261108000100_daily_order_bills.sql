@@ -6,7 +6,7 @@ create table if not exists public.daily_order_bills (
   visit_date date not null,
   created_by uuid not null default auth.uid() references auth.users(id),
   created_at timestamptz not null default now(),
-  constraint daily_order_bills_bill_visit_unique unique (bill_id, visit_date)
+  constraint daily_order_bills_bill_unique unique (bill_id)
 );
 
 create index if not exists daily_order_bills_visit_date_idx
