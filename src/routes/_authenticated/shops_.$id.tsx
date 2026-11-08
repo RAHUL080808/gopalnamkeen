@@ -80,7 +80,7 @@ function ShopDetail() {
       </div>
       <div className="flex items-center justify-between gap-3">
         <div><h2 className="text-base font-extrabold tracking-tight">Bills</h2><p className="text-xs text-muted-foreground">Invoices and remaining balances</p></div>
-        <Button size="sm" onClick={() => setBillOpen(true)}><Plus className="h-4 w-4" /> New bill</Button>
+        {(me?.role === "owner" || me?.role === "driver") && <Button size="sm" onClick={() => setBillOpen(true)}><Plus className="h-4 w-4" /> {me?.role === "driver" ? "Add delivery bill" : "New bill"}</Button>}
       </div>
       {bills.length === 0 ? <Empty>No bills yet.</Empty> : (
         <Card className="divide-y">
@@ -117,7 +117,7 @@ function ShopDetail() {
           ))}
         </Card>
       )}
-      <BillDialog open={billOpen} onOpenChange={setBillOpen} shopId={id} />
+      <BillDialog open={billOpen} onOpenChange={setBillOpen} shopId={id} driverMode={me?.role === "driver"} />
       {editBill && <BillDialog key={editBill.id} open onOpenChange={(o) => !o && setEditBill(null)} bill={editBill} />}
       {driverEditBill && <DriverBillAmountDialog bill={driverEditBill} onClose={() => setDriverEditBill(null)} />}
       <AlertDialog open={deleteShopOpen} onOpenChange={setDeleteShopOpen}>
