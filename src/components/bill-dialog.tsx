@@ -77,21 +77,11 @@ export function DeleteBillButton({ billId, billNumber }: { billId: string; billN
   const [confirmOpen, setConfirmOpen] = useState(false);
   const m = useMutation({
     mutationFn: async () => {
-      const [{ data: direct, error: directError }, { data: allocated, error: allocatedError }] = await Promise.all([
-        supabase.from("payments").select("id").eq("bill_id", billId).limit(1),
-        (supabase.from("payment_allocations") as any).select("id").eq("bill_id", billId).limit(1),
-      ]);
-      if (directError) throw directError;
-      if (allocatedError) throw allocatedError;
-      if ((direct?.length ?? 0) > 0 || (allocated?.length ?? 0) > 0) {
-        throw new Error("Is bill par payment history hai. Payment history wale bill ko delete nahi kar sakte.");
-      }
-      const { data: deletedBill, error } = await supabase.from("bills").delete().eq("id", billId).select("id").maybeSingle();
+      const { error } = await (supabase.rpc as any)("owner_delete_bill_with_payments", { _bill_id: billId });
       if (error) throw error;
-      if (!deletedBill) throw new Error("Bill delete nahi hua. Database permission (RLS) ya bill access check karna hoga.");
     },
     onSuccess: () => {
-      toast.success("Bill deleted");
+      toast.success("Bill and linked payment history deleted");
       qc.invalidateQueries();
       setConfirmOpen(false);
     },
@@ -105,13 +95,15 @@ export function DeleteBillButton({ billId, billNumber }: { billId: string; billN
       </Button>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete bill {billNumber}?</AlertDialogTitle>
-          <AlertDialogDescription>This action cannot be undone. Bills with payment history or advance allocations cannot be deleted.</AlertDialogDescription>
+          <AlertDialogTitle>Delete bill {billNumber} and its payment history?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This is permanent. The bill and all payments directly recorded against it, including their correction history, will be deleted. Any advance payment allocated to this bill will remain in payment history, but its allocation to this bill will be removed. Use this only for test or incorrect records.
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction disabled={m.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => m.mutate()}>
-            {m.isPending ? "Deleting…" : "Delete bill"}
+            {m.isPending ? "Deleting…" : "Delete bill and payments"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
