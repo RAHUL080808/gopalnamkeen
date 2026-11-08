@@ -39,7 +39,7 @@ export function OrderScheduler() {
   const { data: existing = [] } = useQuery({
     queryKey: ["order-scheduler-existing", visitDate, billDate],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("daily_order_bills")
         .select("bill_id")
         .eq("visit_date", visitDate)
