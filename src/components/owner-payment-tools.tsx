@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { WhatsAppReceiptDialog } from "@/components/whatsapp-receipt-dialog";
 
-type Shop = { id: string; name: string };
+type Shop = { id: string; name: string; phone: string | null };
 type Bill = { id: string; bill_number: string; amount: number; balance: number; shop_id: string };
 type Advance = { id: string; shop_id: string; amount: number; paid_at: string; remarks: string | null; reference: string | null; shops: { name: string } | null; payment_allocations: { id: string; amount: number; bill_id: string; bills: { bill_number: string } | null }[] };
 
@@ -26,11 +27,13 @@ export function OwnerPaymentTools() {
   const [mode, setMode] = useState<PaymentMode>("cash");
   const [reference, setReference] = useState("");
   const [remarks, setRemarks] = useState("");
+  const [sendWhatsApp, setSendWhatsApp] = useState(false);
+  const [receipt, setReceipt] = useState<null | { phone: string | null; shopName: string; amount: number; mode: string; paidAt: string; outstanding: number }>(null);
 
   const { data: shops = [] } = useQuery({
     queryKey: ["owner-payment-shops"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("shops").select("id,name").order("name");
+      const { data, error } = await supabase.from("shops").select("id,name,phone").order("name");
       if (error) throw error;
       return (data ?? []) as Shop[];
     },
@@ -64,17 +67,23 @@ export function OwnerPaymentTools() {
       const chosenBill = billId !== "advance" ? bills.find(b => b.id === billId) : null;
       if (billId !== "advance" && !chosenBill) throw new Error("Select a valid bill");
       if (chosenBill && value > Number(chosenBill.balance)) throw new Error("Amount cannot exceed bill balance");
+      const paidAtIso = new Date(paidAt).toISOString();
       const { error } = await (supabase.from("payments") as any).insert({
         shop_id: shopId, bill_id: chosenBill?.id ?? null, amount: value, mode,
-        paid_at: new Date(paidAt).toISOString(), reference: reference.trim() || null,
+        paid_at: paidAtIso, reference: reference.trim() || null,
         remarks: remarks.trim() || null,
       });
       if (error) throw error;
+      const selectedShop = shops.find(s => s.id === shopId);
+      const { data: updatedBills, error: balanceError } = await supabase.from("bills").select("balance").eq("shop_id", shopId);
+      if (balanceError) throw balanceError;
+      return { phone: selectedShop?.phone ?? null, shopName: selectedShop?.name ?? "Customer", amount: value, mode, paidAt: paidAtIso, outstanding: (updatedBills ?? []).reduce((sum, b) => sum + Number(b.balance), 0) };
     },
-    onSuccess: () => {
+    onSuccess: (savedReceipt) => {
       toast.success("Payment recorded");
+      if (sendWhatsApp) setReceipt(savedReceipt);
       setAddOpen(false); setShopId(""); setBillId("advance"); setAmount("");
-      setReference(""); setRemarks(""); setMode("cash"); setPaidAt(new Date().toISOString().slice(0, 16));
+      setReference(""); setRemarks(""); setMode("cash"); setPaidAt(new Date().toISOString().slice(0, 16)); setSendWhatsApp(false);
       qc.invalidateQueries();
     },
     onError: e => toast.error((e as Error).message),
@@ -163,11 +172,13 @@ export function OwnerPaymentTools() {
             </div>
             <div className="space-y-1.5"><Label>Reference (optional)</Label><Input value={reference} maxLength={100} onChange={e => setReference(e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Remarks (optional)</Label><Textarea value={remarks} maxLength={500} onChange={e => setRemarks(e.target.value)} /></div>
+            <label className="flex items-center gap-2 rounded-lg border p-3 text-sm"><input type="checkbox" checked={sendWhatsApp} onChange={e => setSendWhatsApp(e.target.checked)} className="h-4 w-4 accent-primary" /> Ask me to send WhatsApp receipt after saving</label>
             <Button className="w-full" type="submit" disabled={addPayment.isPending}>{addPayment.isPending ? "Saving…" : "Save payment"}</Button>
           </form>
         </DialogContent>
       </Dialog>
 
+      {receipt && <WhatsAppReceiptDialog open={!!receipt} onOpenChange={open => !open && setReceipt(null)} {...receipt} />}
       <Dialog open={allocateOpen} onOpenChange={setAllocateOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Adjust Payment</DialogTitle></DialogHeader>
