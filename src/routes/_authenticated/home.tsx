@@ -82,7 +82,7 @@ function StaffDashboard() {
       {selectedShopId ? (
         <div className="space-y-3">
           <button onClick={() => setSelectedShopId(null)} className="inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Back to today's orders</button>
-          <div><h2 className="text-lg font-extrabold">{selectedShop?.name ?? "Shop bills"}</h2><p className="text-xs text-muted-foreground">Today's bills and all older pending bills</p></div>
+          <div className="flex items-center justify-between gap-3"><div><h2 className="text-lg font-extrabold">{selectedShop?.name ?? "Shop bills"}</h2><p className="text-xs text-muted-foreground">Today's bills and all older pending bills</p></div>{selectedShopId && <Link to="/shops/$id" params={{ id: selectedShopId }} className="shrink-0 rounded-xl border border-border px-3 py-2 text-xs font-bold text-primary hover:bg-primary/5">Shop details · Edit bill</Link>}</div>
           <CollectPayment key={selectedShopId} initialShopId={selectedShopId} />
         </div>
       ) : (
