@@ -5,7 +5,7 @@ import { Home, Store, FileText, IndianRupee, Users, HandCoins, History, LogOut, 
 import { supabase } from "@/integrations/supabase/client";
 import { useMe } from "@/lib/session";
 
-const OWNER_ONLY = ["/shops", "/bills", "/payments", "/team"];
+const OWNER_ONLY = ["/bills", "/payments", "/team"];
 
 const OWNER_NAV = [
   { to: "/home", label: "Overview", icon: Home },
@@ -73,7 +73,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <h2 className="font-extrabold tracking-tight">No access yet</h2>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Your account has no role yet. Ask the owner to add you as a driver or salesman.</p>
           </div>
-        ) : me.role !== "owner" && OWNER_ONLY.some((p) => pathname.startsWith(p)) ? (
+        ) : me.role !== "owner" && (OWNER_ONLY.some((p) => pathname.startsWith(p)) || (pathname === "/shops" && me.role !== "owner")) ? (
           <div className="mx-auto mt-10 max-w-lg rounded-3xl border border-border/70 bg-card p-7 text-center text-sm text-muted-foreground shadow-lg">This page is for the owner only.</div>
         ) : children}
       </main>
