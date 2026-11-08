@@ -65,7 +65,7 @@ function ShopsPage() {
           ))}
         </Card>
       )}
-      <ShopDialog open={open} onOpenChange={setOpen} />
+      <ShopDialog open={open} onOpenChange={setOpen} driverMode={me?.role === "driver"} />
       {me?.role === "owner" && <ShopImportDialog open={importOpen} onOpenChange={setImportOpen} />}
     </div>
   );
@@ -78,14 +78,21 @@ export function ShopDialog({ open, onOpenChange, shop, driverMode = false }: { o
     mutationFn: async () => {
       const row = { name: f.name.trim(), contact_name: f.contact_name.trim() || null, phone: f.phone.trim() || null, address: f.address.trim() || null };
       if (!row.name) throw new Error("Shop name is required");
-      if (driverMode && shop) {
-        const { error } = await (supabase.rpc as any)("driver_update_shop_contact", {
-          _shop_id: shop.id,
-          _name: row.name,
-          _contact_name: row.contact_name,
-          _phone: row.phone,
-          _address: row.address,
-        });
+      if (driverMode) {
+        const { error } = shop
+          ? await (supabase.rpc as any)("driver_update_shop_contact", {
+              _shop_id: shop.id,
+              _name: row.name,
+              _contact_name: row.contact_name,
+              _phone: row.phone,
+              _address: row.address,
+            })
+          : await (supabase.rpc as any)("driver_create_shop", {
+              _name: row.name,
+              _contact_name: row.contact_name,
+              _phone: row.phone,
+              _address: row.address,
+            });
         if (error) throw error;
       } else {
         const { error } = shop ? await supabase.from("shops").update(row).eq("id", shop.id) : await supabase.from("shops").insert(row);
@@ -104,13 +111,13 @@ export function ShopDialog({ open, onOpenChange, shop, driverMode = false }: { o
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader><DialogTitle>{driverMode ? "Update shop contact details" : shop ? "Edit shop" : "Add shop"}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{driverMode ? shop ? "Update shop contact details" : "Add new shop" : shop ? "Edit shop" : "Add shop"}</DialogTitle></DialogHeader>
         <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); m.mutate(); }}>
-          <div className="space-y-1.5"><Label>Shop name</Label><Input required maxLength={120} value={f.name} onChange={set("name")} />{driverMode && <p className="text-xs text-muted-foreground">Update the shop name only if it is incorrect.</p>}</div>
+          <div className="space-y-1.5"><Label>Shop name</Label><Input required maxLength={120} value={f.name} onChange={set("name")} />{driverMode && shop && <p className="text-xs text-muted-foreground">Update the shop name only if it is incorrect.</p>}</div>
           <div className="space-y-1.5"><Label>Contact person</Label><Input maxLength={80} value={f.contact_name} onChange={set("contact_name")} /></div>
           <div className="space-y-1.5"><Label>Phone</Label><Input type="tel" maxLength={20} value={f.phone} onChange={set("phone")} /></div>
           <div className="space-y-1.5"><Label>Address / area</Label><Input maxLength={200} value={f.address} onChange={set("address")} /></div>
-          <Button type="submit" className="w-full" disabled={m.isPending}>{m.isPending ? "Saving…" : driverMode ? "Save contact details" : "Save"}</Button>
+          <Button type="submit" className="w-full" disabled={m.isPending}>{m.isPending ? "Saving…" : driverMode ? shop ? "Save contact details" : "Add shop" : "Save"}</Button>
         </form>
       </DialogContent>
     </Dialog>
