@@ -81,6 +81,7 @@ export function ShopDialog({ open, onOpenChange, shop, driverMode = false }: { o
       if (driverMode && shop) {
         const { error } = await (supabase.rpc as any)("driver_update_shop_contact", {
           _shop_id: shop.id,
+          _name: row.name,
           _contact_name: row.contact_name,
           _phone: row.phone,
           _address: row.address,
@@ -105,7 +106,7 @@ export function ShopDialog({ open, onOpenChange, shop, driverMode = false }: { o
       <DialogContent>
         <DialogHeader><DialogTitle>{driverMode ? "Update shop contact details" : shop ? "Edit shop" : "Add shop"}</DialogTitle></DialogHeader>
         <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); m.mutate(); }}>
-          {!driverMode && <div className="space-y-1.5"><Label>Shop name</Label><Input required maxLength={120} value={f.name} onChange={set("name")} /></div>}
+          <div className="space-y-1.5"><Label>Shop name</Label><Input required maxLength={120} value={f.name} onChange={set("name")} />{driverMode && <p className="text-xs text-muted-foreground">Update the shop name only if it is incorrect.</p>}</div>
           <div className="space-y-1.5"><Label>Contact person</Label><Input maxLength={80} value={f.contact_name} onChange={set("contact_name")} /></div>
           <div className="space-y-1.5"><Label>Phone</Label><Input type="tel" maxLength={20} value={f.phone} onChange={set("phone")} /></div>
           <div className="space-y-1.5"><Label>Address / area</Label><Input maxLength={200} value={f.address} onChange={set("address")} /></div>
