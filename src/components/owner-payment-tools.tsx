@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 type Shop = { id: string; name: string };
 type Bill = { id: string; bill_number: string; amount: number; balance: number; shop_id: string };
-type Advance = { id: string; shop_id: string; amount: number; paid_at: string; remarks: string | null; reference: string | null; shops: { name: string } | null; payment_allocations: { amount: number }[] };
+type Advance = { id: string; shop_id: string; amount: number; paid_at: string; remarks: string | null; reference: string | null; shops: { name: string } | null; payment_allocations: { id: string; amount: number; bill_id: string; bills: { bill_number: string } | null }[] };
 
 export function OwnerPaymentTools() {
   const qc = useQueryClient();
@@ -38,7 +38,7 @@ export function OwnerPaymentTools() {
   const { data: bills = [] } = useQuery({
     queryKey: ["owner-payment-bills"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("bills").select("id,bill_number,amount,balance,shop_id").gt("balance", 0).order("bill_date", { ascending: true });
+      const { data, error } = await supabase.from("bills").select("id,bill_number,amount,balance,shop_id").order("bill_date", { ascending: true });
       if (error) throw error;
       return (data ?? []) as Bill[];
     },
@@ -47,13 +47,13 @@ export function OwnerPaymentTools() {
     queryKey: ["owner-advances"],
     queryFn: async () => {
       const { data, error } = await (supabase.from("payments") as any)
-        .select("id,shop_id,amount,paid_at,remarks,reference,shops(name),payment_allocations(amount)")
+        .select("id,shop_id,amount,paid_at,remarks,reference,shops(name),payment_allocations(id,amount,bill_id,bills(bill_number))")
         .is("bill_id", null).eq("is_void", false).order("paid_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Advance[];
     },
   });
-  const selectedShopBills = useMemo(() => bills.filter(b => b.shop_id === shopId), [bills, shopId]);
+  const selectedShopBills = useMemo(() => bills.filter(b => b.shop_id === shopId && Number(b.balance) > 0), [bills, shopId]);
 
   const addPayment = useMutation({
     mutationFn: async () => {
@@ -87,6 +87,9 @@ export function OwnerPaymentTools() {
   const allocated = chosenAdvance?.payment_allocations.reduce((s, x) => s + Number(x.amount), 0) ?? 0;
   const unallocated = chosenAdvance ? Number(chosenAdvance.amount) - allocated : 0;
   const advanceBills = chosenAdvance ? bills.filter(b => b.shop_id === chosenAdvance.shop_id) : [];
+  const [editingAllocation, setEditingAllocation] = useState<string | null>(null);
+  const [editBillId, setEditBillId] = useState("");
+  const [editAmount, setEditAmount] = useState("");
 
   const allocate = useMutation({
     mutationFn: async () => {
@@ -99,6 +102,33 @@ export function OwnerPaymentTools() {
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Advance allocated"); setAllocAmount(""); setAllocBill(""); qc.invalidateQueries(); },
+    onError: e => toast.error((e as Error).message),
+  });
+
+  const updateAllocation = useMutation({
+    mutationFn: async () => {
+      const current = chosenAdvance?.payment_allocations.find(a => a.id === editingAllocation);
+      const value = Number(editAmount);
+      const target = advanceBills.find(b => b.id === editBillId);
+      if (!current || !target || !(value > 0)) throw new Error("Select a valid bill and amount");
+      const availablePayment = unallocated + Number(current.amount);
+      const availableBill = Number(target.balance) + (target.id === current.bill_id ? Number(current.amount) : 0);
+      if (value > availablePayment) throw new Error("Amount exceeds the payment's available balance");
+      if (value > availableBill) throw new Error("Amount exceeds the bill's outstanding balance");
+      const { error } = await (supabase.from("payment_allocations") as any)
+        .update({ bill_id: editBillId, amount: value }).eq("id", editingAllocation);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Allocation updated"); setEditingAllocation(null); setEditBillId(""); setEditAmount(""); qc.invalidateQueries(); },
+    onError: e => toast.error((e as Error).message),
+  });
+
+  const deleteAllocation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase.from("payment_allocations") as any).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Allocation removed; amount is available again"); setEditingAllocation(null); qc.invalidateQueries(); },
     onError: e => toast.error((e as Error).message),
   });
 
@@ -153,6 +183,22 @@ export function OwnerPaymentTools() {
             </div>
             {chosenAdvance && <>
               <p className="rounded-lg bg-muted p-3 text-sm">Received {inr(chosenAdvance.amount)} · Allocated {inr(allocated)} · <b>Available {inr(unallocated)}</b></p>
+              {chosenAdvance.payment_allocations.length > 0 && <div className="space-y-2 rounded-lg border p-3">
+                <Label>Existing bill allocations</Label>
+                {chosenAdvance.payment_allocations.map(a => <div key={a.id} className="flex items-center justify-between gap-2 text-sm">
+                  <span>{a.bills?.bill_number ?? "Bill"} · {inr(a.amount)}</span>
+                  <div className="flex gap-1">
+                    <Button type="button" size="sm" variant="outline" onClick={() => { setEditingAllocation(a.id); setEditBillId(a.bill_id); setEditAmount(String(a.amount)); }}>Edit</Button>
+                    <Button type="button" size="sm" variant="destructive" disabled={deleteAllocation.isPending} onClick={() => { if (window.confirm("Remove this allocation? The payment will remain unchanged.")) deleteAllocation.mutate(a.id); }}>Remove</Button>
+                  </div>
+                </div>)}
+              </div>}
+              {editingAllocation && <div className="space-y-2 rounded-lg border p-3">
+                <Label>Edit allocation</Label>
+                <Select value={editBillId} onValueChange={setEditBillId}><SelectTrigger><SelectValue placeholder="Choose bill" /></SelectTrigger><SelectContent>{advanceBills.map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}</SelectContent></Select>
+                <Input type="number" min="0.01" step="0.01" value={editAmount} onChange={e => setEditAmount(e.target.value)} />
+                <div className="flex gap-2"><Button type="button" className="flex-1" disabled={updateAllocation.isPending} onClick={() => updateAllocation.mutate()}>{updateAllocation.isPending ? "Saving…" : "Save adjustment"}</Button><Button type="button" variant="outline" onClick={() => setEditingAllocation(null)}>Cancel</Button></div>
+              </div>}
               <div className="space-y-1.5"><Label>Bill (same shop only)</Label>
                 <Select value={allocBill} onValueChange={setAllocBill}><SelectTrigger><SelectValue placeholder="Choose bill" /></SelectTrigger><SelectContent>{advanceBills.map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}</SelectContent></Select>
               </div>
