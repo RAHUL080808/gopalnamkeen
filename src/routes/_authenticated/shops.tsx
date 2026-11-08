@@ -60,7 +60,7 @@ function ShopsPage() {
                 <div className="truncate font-extrabold tracking-tight transition-colors group-hover:text-primary">{s.name}</div>
                 <div className="truncate text-xs text-muted-foreground">{[s.contact_name, s.phone].filter(Boolean).join(" · ") || "—"}</div>
               </div>
-              <div className="shrink-0 text-right"><div className={`tabular font-bold ${s.due > 0 ? "text-destructive" : "text-success"}`}>{inr(s.due)}</div>{s.advance > 0 && <div className="text-[11px] font-medium text-primary">Advance {inr(s.advance)}</div>}</div>
+              <div className="shrink-0 text-right"><div className={`tabular font-bold ${s.due > 0 ? "text-destructive" : "text-success"}`}>{inr(s.due)}</div></div>
             </Link>
           ))}
         </Card>
