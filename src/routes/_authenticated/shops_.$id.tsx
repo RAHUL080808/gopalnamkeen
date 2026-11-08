@@ -53,17 +53,18 @@ function ShopDetail() {
   const { data } = useQuery({
     queryKey: ["shop", id],
     queryFn: async () => {
-      const [{ data: shop }, { data: bills }, { data: pays }] = await Promise.all([
+      const [{ data: shop }, { data: bills }, { data: pays }, { data: amountEdits }] = await Promise.all([
         supabase.from("shops").select("*").eq("id", id).maybeSingle(),
         supabase.from("bills").select("*").eq("shop_id", id).order("bill_date", { ascending: false }),
         (supabase.from("payments") as any).select("id, bill_id, amount, mode, paid_at, employee_name, is_void, reference, remarks, bills(bill_number), payment_allocations(amount, bills(bill_number))").eq("shop_id", id).order("paid_at", { ascending: false }),
+        (supabase.from("bill_amount_edit_history") as any).select("id,bill_id,old_amount,new_amount,edited_by,edited_at,bills(bill_number)").in("bill_id", (await supabase.from("bills").select("id").eq("shop_id", id)).data?.map((b) => b.id) ?? []).order("edited_at", { ascending: false }),
       ]);
-      return { shop, bills: bills ?? [], pays: pays ?? [] };
+      return { shop, bills: bills ?? [], pays: pays ?? [], amountEdits: amountEdits ?? [] };
     },
   });
   if (!data) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (!data.shop) return <Empty>Shop not found.</Empty>;
-  const { shop, bills, pays } = data;
+  const { shop, bills, pays, amountEdits = [] } = data;
   const total = bills.reduce((s, b) => s + Number(b.amount), 0);
   const due = bills.reduce((s, b) => s + Number(b.balance), 0);
   const unallocatedAdvance = pays.filter((p: any) => p.bill_id === null && !p.is_void).reduce((sum: number, p: any) => sum + Math.max(0, Number(p.amount) - (p.payment_allocations ?? []).reduce((a: number, x: any) => a + Number(x.amount), 0)), 0);
@@ -104,6 +105,7 @@ function ShopDetail() {
           ))}
         </Card>
       )}
+      {me?.role === "owner" && amountEdits.length > 0 && <section className="space-y-2"><div><h2 className="text-base font-extrabold tracking-tight">Bill amount edit history</h2><p className="text-xs text-muted-foreground">Changes made by drivers</p></div><Card className="divide-y">{amountEdits.map((entry: any) => <div key={entry.id} className="flex items-center justify-between gap-3 p-3"><div><div className="text-sm font-semibold">{entry.bills?.bill_number ?? "Bill"} · {fmtDateTime(entry.edited_at)}</div><div className="text-xs text-muted-foreground">Edited by user {String(entry.edited_by).slice(0, 8)}</div></div><div className="text-right text-sm"><div className="text-muted-foreground line-through">{inr(entry.old_amount)}</div><div className="font-bold">{inr(entry.new_amount)}</div></div></div>)}</Card></section>}
       <div><h2 className="text-base font-extrabold tracking-tight">Payments</h2><p className="text-xs text-muted-foreground">Payment history</p></div>
       {pays.length === 0 ? <Empty>No payments yet.</Empty> : (
         <Card className="divide-y">
