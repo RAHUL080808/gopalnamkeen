@@ -47,7 +47,7 @@ function AllPayments() {
         <div key={p.id} className="flex items-start justify-between gap-3 p-4 transition-all hover:bg-primary/[0.035]">
           <div className="min-w-0">
             <div className="truncate font-semibold">{p.shops?.name}</div>
-            <div className="text-xs text-muted-foreground">{p.bills?.bill_number ?? ((p as any).payment_allocations?.length ? `Allocated: ${(p as any).payment_allocations.map((a: any) => `${a.bills?.bill_number ?? "Bill"} (${inr(a.amount)})`).join(", ")}` : "Without bill · Advance")} · {modeLabel(p.mode)}{p.reference ? ` · ${p.reference}` : ""}</div>
+            <div className="text-xs text-muted-foreground">{p.bills?.bill_number ?? ((p as any).payment_allocations?.length ? `Allocated: ${(p as any).payment_allocations.map((a: any) => `${a.bills?.bill_number ?? "Bill"} (${inr(a.amount)})`).join(", ")}` : "Payment not assigned to a bill")} · {modeLabel(p.mode)}{p.reference ? ` · ${p.reference}` : ""}</div>
             {(p as any).remarks && <div className="mt-0.5 text-xs text-muted-foreground">Remark: {(p as any).remarks}</div>}
             <div className="text-xs text-muted-foreground"><span className="capitalize">{p.employee_name} ({p.employee_role})</span> · {fmtDateTime(p.paid_at)}</div>
           </div>
@@ -78,7 +78,7 @@ function Corrections() {
       {data.map((c) => (
         <Card key={c.id} className="space-y-1 p-5 shadow-sm transition-shadow hover:shadow-md">
           <div className="flex items-center justify-between">
-            <div className="font-semibold">{c.payments?.shops?.name} · {c.payments?.bills?.bill_number ?? "Without bill · Advance"}</div>
+            <div className="font-semibold">{c.payments?.shops?.name} · {c.payments?.bills?.bill_number ?? "Payment not assigned to a bill"}</div>
             <span className={cn("text-xs font-semibold capitalize", c.status === "pending" ? "text-warning-foreground" : c.status === "approved" ? "text-success" : "text-destructive")}>{c.status}</span>
           </div>
           <div className="mt-1 text-sm">
