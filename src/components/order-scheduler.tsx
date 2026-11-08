@@ -67,7 +67,7 @@ export function OrderScheduler() {
       }
       if (selectedBills.length) {
         const rows = selectedBills.map((b) => ({ bill_id: b.id, bill_date: billDate, visit_date: visitDate }));
-        const { error } = await (supabase as any).from("daily_order_bills").upsert(rows, { onConflict: "bill_id,visit_date" });
+        const { error } = await (supabase as any).from("daily_order_bills").upsert(rows, { onConflict: "bill_id" });
         if (error) throw error;
       }
     },
