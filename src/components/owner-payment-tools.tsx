@@ -75,9 +75,15 @@ export function OwnerPaymentTools() {
       });
       if (error) throw error;
       const selectedShop = shops.find(s => s.id === shopId);
-      const { data: updatedBills, error: balanceError } = await supabase.from("bills").select("balance").eq("shop_id", shopId);
+      const [{ data: updatedBills, error: balanceError }, { data: advances, error: advanceError }] = await Promise.all([
+        supabase.from("bills").select("balance").eq("shop_id", shopId),
+        (supabase.from("payments") as any).select("amount,payment_allocations(amount)").eq("shop_id", shopId).is("bill_id", null).eq("is_void", false),
+      ]);
       if (balanceError) throw balanceError;
-      return { phone: selectedShop?.phone ?? null, shopName: selectedShop?.name ?? "Customer", amount: value, mode, paidAt: paidAtIso, outstanding: (updatedBills ?? []).reduce((sum, b) => sum + Number(b.balance), 0) };
+      if (advanceError) throw advanceError;
+      const billDue = (updatedBills ?? []).reduce((sum, b) => sum + Number(b.balance), 0);
+      const unallocatedAdvance = (advances ?? []).reduce((sum: number, p: any) => sum + Math.max(0, Number(p.amount) - (p.payment_allocations ?? []).reduce((allocated: number, a: any) => allocated + Number(a.amount), 0)), 0);
+      return { phone: selectedShop?.phone ?? null, shopName: selectedShop?.name ?? "Customer", amount: value, mode, paidAt: paidAtIso, outstanding: Math.max(0, billDue - unallocatedAdvance) };
     },
     onSuccess: (savedReceipt) => {
       toast.success("Payment recorded");
