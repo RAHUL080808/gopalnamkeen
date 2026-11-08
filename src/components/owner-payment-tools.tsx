@@ -135,7 +135,7 @@ export function OwnerPaymentTools() {
   return (
     <div className="flex flex-wrap gap-2">
       <Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Add payment</Button>
-      <Button variant="outline" onClick={() => setAllocateOpen(true)}><ArrowRightLeft className="h-4 w-4" /> Adjust payment</Button>
+      <Button variant="outline" onClick={() => setAllocateOpen(true)}><ArrowRightLeft className="h-4 w-4" /> Adjust Payment</Button>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
@@ -149,9 +149,9 @@ export function OwnerPaymentTools() {
             </div>
             <div className="space-y-1.5"><Label>Payment for</Label>
               <Select value={billId} onValueChange={setBillId}>
-                <SelectTrigger><SelectValue placeholder="Choose bill or advance" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Choose bill or Without Bill Payment" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="advance">Not assigned to a bill</SelectItem>
+                  <SelectItem value="advance">Without Bill Payment</SelectItem>
                   {selectedShopBills.map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -170,9 +170,9 @@ export function OwnerPaymentTools() {
 
       <Dialog open={allocateOpen} onOpenChange={setAllocateOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Adjust received payment</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Adjust Payment</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1.5"><Label>Payment to adjust</Label>
+            <div className="space-y-1.5"><Label>Without Bill Payment</Label>
               <Select value={allocPayment} onValueChange={v => { setAllocPayment(v); setAllocBill(""); setAllocAmount(""); }}>
                 <SelectTrigger><SelectValue placeholder="Choose payment" /></SelectTrigger>
                 <SelectContent>{paymentsToAdjust.map(a => {
@@ -205,7 +205,7 @@ export function OwnerPaymentTools() {
               <div className="space-y-1.5"><Label>Amount to allocate (₹)</Label><Input type="number" min="0.01" max={Math.min(unallocated, Number(shopBills.find(b=>b.id===allocBill)?.balance ?? 0))} step="0.01" value={allocAmount} onChange={e=>setAllocAmount(e.target.value)} /></div>
               <Button className="w-full" disabled={allocate.isPending} onClick={() => allocate.mutate()}>{allocate.isPending ? "Allocating…" : "Adjust against bill"}</Button>
             </>}
-            {paymentsToAdjust.length === 0 && <p className="text-sm text-muted-foreground">No payments available to adjust.</p>}
+            {paymentsToAdjust.length === 0 && <p className="text-sm text-muted-foreground">No Without Bill Payments available to adjust.</p>}
           </div>
         </DialogContent>
       </Dialog>

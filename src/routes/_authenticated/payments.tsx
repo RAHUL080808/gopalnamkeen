@@ -21,7 +21,7 @@ function PaymentsPage() {
   const navigate = Route.useNavigate();
   return (
     <div className="space-y-5">
-      <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#132443] via-[#20395f] to-[#315477] p-5 text-white shadow-xl shadow-slate-900/10 sm:p-7"><div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full border-[25px] border-white/[0.06]" /><div className="relative"><div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/55">Money movement</div><h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Payments</h1><p className="mt-1 text-xs text-white/65">Review collections, advances and payment correction requests.</p></div></div>
+      <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#132443] via-[#20395f] to-[#315477] p-5 text-white shadow-xl shadow-slate-900/10 sm:p-7"><div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full border-[25px] border-white/[0.06]" /><div className="relative"><div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/55">Money movement</div><h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Payments</h1><p className="mt-1 text-xs text-white/65">Review collections, Without Bill Payments and correction requests.</p></div></div>
       <OwnerPaymentTools />
       <div className="flex gap-2 rounded-2xl border border-border/70 bg-muted/60 p-1.5">
         {(["all", "corrections"] as const).map((t) => (
@@ -47,7 +47,7 @@ function AllPayments() {
         <div key={p.id} className="flex items-start justify-between gap-3 p-4 transition-all hover:bg-primary/[0.035]">
           <div className="min-w-0">
             <div className="truncate font-semibold">{p.shops?.name}</div>
-            <div className="text-xs text-muted-foreground">{p.bills?.bill_number ?? ((p as any).payment_allocations?.length ? `Allocated: ${(p as any).payment_allocations.map((a: any) => `${a.bills?.bill_number ?? "Bill"} (${inr(a.amount)})`).join(", ")}` : "Payment not assigned to a bill")} · {modeLabel(p.mode)}{p.reference ? ` · ${p.reference}` : ""}</div>
+            <div className="text-xs text-muted-foreground">{p.bills?.bill_number ?? ((p as any).payment_allocations?.length ? `Allocated: ${(p as any).payment_allocations.map((a: any) => `${a.bills?.bill_number ?? "Bill"} (${inr(a.amount)})`).join(", ")}` : "Without Bill Payment")} · {modeLabel(p.mode)}{p.reference ? ` · ${p.reference}` : ""}</div>
             {(p as any).remarks && <div className="mt-0.5 text-xs text-muted-foreground">Remark: {(p as any).remarks}</div>}
             <div className="text-xs text-muted-foreground"><span className="capitalize">{p.employee_name} ({p.employee_role})</span> · {fmtDateTime(p.paid_at)}</div>
           </div>
@@ -78,7 +78,7 @@ function Corrections() {
       {data.map((c) => (
         <Card key={c.id} className="space-y-1 p-5 shadow-sm transition-shadow hover:shadow-md">
           <div className="flex items-center justify-between">
-            <div className="font-semibold">{c.payments?.shops?.name} · {c.payments?.bills?.bill_number ?? "Payment not assigned to a bill"}</div>
+            <div className="font-semibold">{c.payments?.shops?.name} · {c.payments?.bills?.bill_number ?? "Without Bill Payment"}</div>
             <span className={cn("text-xs font-semibold capitalize", c.status === "pending" ? "text-warning-foreground" : c.status === "approved" ? "text-success" : "text-destructive")}>{c.status}</span>
           </div>
           <div className="mt-1 text-sm">
