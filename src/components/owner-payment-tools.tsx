@@ -43,8 +43,8 @@ export function OwnerPaymentTools() {
       return (data ?? []) as Bill[];
     },
   });
-  const { data: advances = [] } = useQuery({
-    queryKey: ["owner-advances"],
+  const { data: paymentsToAdjust = [] } = useQuery({
+    queryKey: ["owner-paymentsToAdjust"],
     queryFn: async () => {
       const { data, error } = await (supabase.from("payments") as any)
         .select("id,shop_id,amount,paid_at,remarks,reference,shops(name),payment_allocations(id,amount,bill_id,bills(bill_number))")
@@ -83,10 +83,10 @@ export function OwnerPaymentTools() {
   const [allocPayment, setAllocPayment] = useState("");
   const [allocBill, setAllocBill] = useState("");
   const [allocAmount, setAllocAmount] = useState("");
-  const chosenAdvance = advances.find(a => a.id === allocPayment);
-  const allocated = chosenAdvance?.payment_allocations.reduce((s, x) => s + Number(x.amount), 0) ?? 0;
-  const unallocated = chosenAdvance ? Number(chosenAdvance.amount) - allocated : 0;
-  const advanceBills = chosenAdvance ? bills.filter(b => b.shop_id === chosenAdvance.shop_id) : [];
+  const chosenPayment = paymentsToAdjust.find(a => a.id === allocPayment);
+  const allocated = chosenPayment?.payment_allocations.reduce((s, x) => s + Number(x.amount), 0) ?? 0;
+  const unallocated = chosenPayment ? Number(chosenPayment.amount) - allocated : 0;
+  const shopBills = chosenPayment ? bills.filter(b => b.shop_id === chosenPayment.shop_id) : [];
   const [editingAllocation, setEditingAllocation] = useState<string | null>(null);
   const [editBillId, setEditBillId] = useState("");
   const [editAmount, setEditAmount] = useState("");
@@ -94,22 +94,22 @@ export function OwnerPaymentTools() {
   const allocate = useMutation({
     mutationFn: async () => {
       const value = Number(allocAmount);
-      if (!allocPayment || !allocBill) throw new Error("Select advance and bill");
-      if (!(value > 0) || value > unallocated) throw new Error("Enter an amount within the unallocated advance");
-      const target = advanceBills.find(b => b.id === allocBill);
+      if (!allocPayment || !allocBill) throw new Error("Select payment and bill");
+      if (!(value > 0) || value > unallocated) throw new Error("Enter an amount within the unallocated payment");
+      const target = shopBills.find(b => b.id === allocBill);
       if (!target || value > Number(target.balance)) throw new Error("Amount cannot exceed this bill's balance");
       const { error } = await (supabase.from("payment_allocations") as any).insert({ payment_id: allocPayment, bill_id: allocBill, amount: value });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Advance allocated"); setAllocAmount(""); setAllocBill(""); qc.invalidateQueries(); },
+    onSuccess: () => { toast.success("Payment adjusted"); setAllocAmount(""); setAllocBill(""); qc.invalidateQueries(); },
     onError: e => toast.error((e as Error).message),
   });
 
   const updateAllocation = useMutation({
     mutationFn: async () => {
-      const current = chosenAdvance?.payment_allocations.find(a => a.id === editingAllocation);
+      const current = chosenPayment?.payment_allocations.find(a => a.id === editingAllocation);
       const value = Number(editAmount);
-      const target = advanceBills.find(b => b.id === editBillId);
+      const target = shopBills.find(b => b.id === editBillId);
       if (!current || !target || !(value > 0)) throw new Error("Select a valid bill and amount");
       const availablePayment = unallocated + Number(current.amount);
       const availableBill = Number(target.balance) + (target.id === current.bill_id ? Number(current.amount) : 0);
@@ -135,7 +135,7 @@ export function OwnerPaymentTools() {
   return (
     <div className="flex flex-wrap gap-2">
       <Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Add payment</Button>
-      <Button variant="outline" onClick={() => setAllocateOpen(true)}><ArrowRightLeft className="h-4 w-4" /> Allocate advance</Button>
+      <Button variant="outline" onClick={() => setAllocateOpen(true)}><ArrowRightLeft className="h-4 w-4" /> Adjust payment</Button>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
@@ -151,7 +151,7 @@ export function OwnerPaymentTools() {
               <Select value={billId} onValueChange={setBillId}>
                 <SelectTrigger><SelectValue placeholder="Choose bill or advance" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="advance">Without bill (shop advance)</SelectItem>
+                  <SelectItem value="advance">Not assigned to a bill</SelectItem>
                   {selectedShopBills.map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -170,22 +170,22 @@ export function OwnerPaymentTools() {
 
       <Dialog open={allocateOpen} onOpenChange={setAllocateOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Allocate shop advance</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Adjust received payment</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1.5"><Label>Advance payment</Label>
+            <div className="space-y-1.5"><Label>Payment to adjust</Label>
               <Select value={allocPayment} onValueChange={v => { setAllocPayment(v); setAllocBill(""); setAllocAmount(""); }}>
-                <SelectTrigger><SelectValue placeholder="Choose advance" /></SelectTrigger>
-                <SelectContent>{advances.map(a => {
+                <SelectTrigger><SelectValue placeholder="Choose payment" /></SelectTrigger>
+                <SelectContent>{paymentsToAdjust.map(a => {
                   const left = Number(a.amount) - a.payment_allocations.reduce((s,x) => s + Number(x.amount),0);
                   return left > 0 ? <SelectItem key={a.id} value={a.id}>{a.shops?.name ?? "Shop"} · {inr(left)} available · {fmtDateTime(a.paid_at)}</SelectItem> : null;
                 })}</SelectContent>
               </Select>
             </div>
-            {chosenAdvance && <>
-              <p className="rounded-lg bg-muted p-3 text-sm">Received {inr(chosenAdvance.amount)} · Allocated {inr(allocated)} · <b>Available {inr(unallocated)}</b></p>
-              {chosenAdvance.payment_allocations.length > 0 && <div className="space-y-2 rounded-lg border p-3">
+            {chosenPayment && <>
+              <p className="rounded-lg bg-muted p-3 text-sm">Received {inr(chosenPayment.amount)} · Allocated {inr(allocated)} · <b>Available {inr(unallocated)}</b></p>
+              {chosenPayment.payment_allocations.length > 0 && <div className="space-y-2 rounded-lg border p-3">
                 <Label>Existing bill allocations</Label>
-                {chosenAdvance.payment_allocations.map(a => <div key={a.id} className="flex items-center justify-between gap-2 text-sm">
+                {chosenPayment.payment_allocations.map(a => <div key={a.id} className="flex items-center justify-between gap-2 text-sm">
                   <span>{a.bills?.bill_number ?? "Bill"} · {inr(a.amount)}</span>
                   <div className="flex gap-1">
                     <Button type="button" size="sm" variant="outline" onClick={() => { setEditingAllocation(a.id); setEditBillId(a.bill_id); setEditAmount(String(a.amount)); }}>Edit</Button>
@@ -195,17 +195,17 @@ export function OwnerPaymentTools() {
               </div>}
               {editingAllocation && <div className="space-y-2 rounded-lg border p-3">
                 <Label>Edit allocation</Label>
-                <Select value={editBillId} onValueChange={setEditBillId}><SelectTrigger><SelectValue placeholder="Choose bill" /></SelectTrigger><SelectContent>{advanceBills.map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}</SelectContent></Select>
+                <Select value={editBillId} onValueChange={setEditBillId}><SelectTrigger><SelectValue placeholder="Choose bill" /></SelectTrigger><SelectContent>{shopBills.map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}</SelectContent></Select>
                 <Input type="number" min="0.01" step="0.01" value={editAmount} onChange={e => setEditAmount(e.target.value)} />
                 <div className="flex gap-2"><Button type="button" className="flex-1" disabled={updateAllocation.isPending} onClick={() => updateAllocation.mutate()}>{updateAllocation.isPending ? "Saving…" : "Save adjustment"}</Button><Button type="button" variant="outline" onClick={() => setEditingAllocation(null)}>Cancel</Button></div>
               </div>}
               <div className="space-y-1.5"><Label>Bill (same shop only)</Label>
-                <Select value={allocBill} onValueChange={setAllocBill}><SelectTrigger><SelectValue placeholder="Choose bill" /></SelectTrigger><SelectContent>{advanceBills.map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}</SelectContent></Select>
+                <Select value={allocBill} onValueChange={setAllocBill}><SelectTrigger><SelectValue placeholder="Choose bill" /></SelectTrigger><SelectContent>{shopBills.map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}</SelectContent></Select>
               </div>
-              <div className="space-y-1.5"><Label>Amount to allocate (₹)</Label><Input type="number" min="0.01" max={Math.min(unallocated, Number(advanceBills.find(b=>b.id===allocBill)?.balance ?? 0))} step="0.01" value={allocAmount} onChange={e=>setAllocAmount(e.target.value)} /></div>
-              <Button className="w-full" disabled={allocate.isPending} onClick={() => allocate.mutate()}>{allocate.isPending ? "Allocating…" : "Allocate to bill"}</Button>
+              <div className="space-y-1.5"><Label>Amount to allocate (₹)</Label><Input type="number" min="0.01" max={Math.min(unallocated, Number(shopBills.find(b=>b.id===allocBill)?.balance ?? 0))} step="0.01" value={allocAmount} onChange={e=>setAllocAmount(e.target.value)} /></div>
+              <Button className="w-full" disabled={allocate.isPending} onClick={() => allocate.mutate()}>{allocate.isPending ? "Allocating…" : "Adjust against bill"}</Button>
             </>}
-            {advances.length === 0 && <p className="text-sm text-muted-foreground">No shop advances recorded yet.</p>}
+            {paymentsToAdjust.length === 0 && <p className="text-sm text-muted-foreground">No payments available to adjust.</p>}
           </div>
         </DialogContent>
       </Dialog>
