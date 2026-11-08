@@ -20,6 +20,12 @@ const STAFF_NAV = [
   { to: "/history", label: "My history", icon: History },
 ] as const;
 
+const DRIVER_NAV = [
+  { to: "/home", label: "Collect", icon: HandCoins },
+  { to: "/shops", label: "Shops", icon: Store },
+  { to: "/history", label: "My history", icon: History },
+] as const;
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { data: me, isLoading } = useMe();
   const navigate = useNavigate();
@@ -33,7 +39,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/auth", replace: true });
   }
 
-  const nav = me?.role === "owner" ? OWNER_NAV : STAFF_NAV;
+  const nav = me?.role === "owner" ? OWNER_NAV : me?.role === "driver" ? DRIVER_NAV : STAFF_NAV;
 
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/[0.07] via-background to-muted/50 pb-24 md:pb-8">
@@ -73,7 +79,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <h2 className="font-extrabold tracking-tight">No access yet</h2>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Your account has no role yet. Ask the owner to add you as a driver or salesman.</p>
           </div>
-        ) : me.role !== "owner" && (OWNER_ONLY.some((p) => pathname.startsWith(p)) || (pathname === "/shops" && me.role !== "owner")) ? (
+        ) : me.role !== "owner" && (OWNER_ONLY.some((p) => pathname.startsWith(p)) || (pathname === "/shops" && me.role !== "owner" && me.role !== "driver")) ? (
           <div className="mx-auto mt-10 max-w-lg rounded-3xl border border-border/70 bg-card p-7 text-center text-sm text-muted-foreground shadow-lg">This page is for the owner only.</div>
         ) : children}
       </main>
