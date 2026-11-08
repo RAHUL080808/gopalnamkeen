@@ -13,6 +13,7 @@ import { Card, Empty } from "@/components/bits";
 import { CollectPayment } from "@/components/collect-payment";
 import { pageMeta } from "@/lib/page-meta";
 import { BillDialog } from "@/components/bill-dialog";
+import { OrderScheduler } from "@/components/order-scheduler";
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => pageMeta("Dashboard — CreditBook", "Track FMCG sales, received payments, outstanding credit and employee collections."),
@@ -42,14 +43,15 @@ function StaffDashboard() {
     queryKey: ["staff-todays-orders", today],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("bills")
-        .select("id, bill_number, bill_date, amount, balance, shop_id, shops(id, name)")
-        .eq("bill_date", today)
+        .from("daily_order_bills")
+        .select("bill_id, bills!inner(id, bill_number, bill_date, amount, balance, shop_id, shops!inner(id, name))")
+        .eq("visit_date", today)
         .order("created_at", { ascending: false });
       if (error) throw error;
       const grouped = new Map<string, { id: string; name: string; bills: any[]; total: number; due: number }>();
-      for (const bill of data ?? []) {
-        const shop = bill.shops as unknown as { id: string; name: string } | null;
+      for (const entry of data ?? []) {
+        const bill = (entry as any).bills;
+        const shop = bill?.shops as unknown as { id: string; name: string } | null;
         if (!shop) continue;
         const item = grouped.get(shop.id) ?? { id: shop.id, name: shop.name, bills: [], total: 0, due: 0 };
         item.bills.push(bill);
@@ -201,6 +203,8 @@ function OwnerDashboard() {
           <div><p className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Part-paid</p><p className="mt-1 text-xl font-extrabold tabular text-amber-200 sm:text-2xl">{isLoading ? "—" : data?.partialBills ?? 0}</p></div>
         </div>
       </section>
+
+      <OrderScheduler />
 
       <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <MetricCard label="Total sales" value={isLoading ? "—" : inr(data?.sales ?? 0)} caption="Value of all recorded bills" icon={ReceiptText} />
