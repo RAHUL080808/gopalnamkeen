@@ -49,7 +49,7 @@ export function BillDialog({ open, onOpenChange, shopId, bill }: { open: boolean
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader><DialogTitle>{bill ? "Edit bill" : "Add today's order"}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{bill ? "Edit bill" : "Add bill"}</DialogTitle></DialogHeader>
         <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); m.mutate(); }}>
           {!shopId && !bill && (
             <div className="space-y-1.5">
@@ -60,7 +60,7 @@ export function BillDialog({ open, onOpenChange, shopId, bill }: { open: boolean
               </select>
             </div>
           )}
-          <div className="space-y-1.5"><Label>Bill date / Order date</Label><Input type="date" required value={date} onChange={(e) => setDate(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Bill date</Label><Input type="date" required value={date} onChange={(e) => setDate(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>Bill amount (₹)</Label><Input type="number" inputMode="decimal" step="0.01" min="0.01" required value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>Notes</Label><Input maxLength={200} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
           <p className="text-xs text-muted-foreground">Bill number is generated automatically.</p>
