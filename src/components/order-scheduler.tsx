@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Check, Loader2, Store } from "lucide-react";
+import { CalendarDays, Check, Store } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/bits";
@@ -62,12 +62,12 @@ export function OrderScheduler() {
       const existingIds = existing.map((x) => x.bill_id);
       const removeIds = existingIds.filter((id) => !selectedSet.has(id));
       for (const id of removeIds) {
-        const { error } = await supabase.from("daily_order_bills").delete().eq("bill_id", id).eq("visit_date", visitDate);
+        const { error } = await (supabase as any).from("daily_order_bills").delete().eq("bill_id", id).eq("visit_date", visitDate);
         if (error) throw error;
       }
       if (selectedBills.length) {
         const rows = selectedBills.map((b) => ({ bill_id: b.id, bill_date: billDate, visit_date: visitDate }));
-        const { error } = await supabase.from("daily_order_bills").upsert(rows, { onConflict: "bill_id,visit_date" });
+        const { error } = await (supabase as any).from("daily_order_bills").upsert(rows, { onConflict: "bill_id,visit_date" });
         if (error) throw error;
       }
     },
