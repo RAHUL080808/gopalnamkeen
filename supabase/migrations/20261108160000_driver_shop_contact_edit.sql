@@ -34,4 +34,4 @@ end;
 $$;
 
 revoke all on function public.driver_update_shop_contact(uuid, text, text, text, text) from public;
-grant execute on function public.driver_update_shop_contact(uuid, text, text, text) to authenticated;
+grant execute on function public.driver_update_shop_contact(uuid, text, text, text, text) to authenticated;
