@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { WhatsAppReceiptDialog } from "@/components/whatsapp-receipt-dialog";
 
 type Bill = { id: string; bill_number: string; bill_date: string; amount: number; paid_amount: number; balance: number; status: string; shop_id: string };
 
@@ -20,12 +21,13 @@ export function CollectPayment({ initialShopId = null }: { initialShopId?: strin
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState<PaymentMode>("cash");
   const [reference, setReference] = useState("");
+  const [receipt, setReceipt] = useState<null | { phone: string | null; shopName: string; amount: number; mode: string; paidAt: string; outstanding: number }>(null);
 
   const { data: shops = [] } = useQuery({
     queryKey: ["collect-shops"],
     queryFn: async () => {
       const [{ data: s }, { data: b }] = await Promise.all([
-        supabase.from("shops").select("id, name, address").order("name"),
+        supabase.from("shops").select("id, name, address, phone").order("name"),
         supabase.from("bills").select("id, bill_number, bill_date, amount, paid_amount, balance, status, shop_id").neq("status", "paid").order("bill_date"),
       ]);
       return (s ?? []).map((shop) => {
@@ -47,17 +49,23 @@ export function CollectPayment({ initialShopId = null }: { initialShopId?: strin
       const amt = Number(amount);
       if (!(amt > 0)) throw new Error("Enter a valid amount");
       if (amt > Number(bill.balance)) throw new Error(`Amount cannot exceed balance ${inr(bill.balance)}`);
+      const paidAt = new Date().toISOString();
       const { error } = await supabase.from("payments").insert({
         bill_id: bill.id,
         shop_id: bill.shop_id,
         amount: amt,
         mode,
         reference: reference.trim() || null,
+        paid_at: paidAt,
       } as never);
       if (error) throw error;
+      const { data: updatedBills, error: balanceError } = await supabase.from("bills").select("balance").eq("shop_id", bill.shop_id);
+      if (balanceError) throw balanceError;
+      return { phone: shop?.phone ?? null, shopName: shop?.name ?? "Customer", amount: amt, mode, paidAt, outstanding: (updatedBills ?? []).reduce((sum, row) => sum + Number(row.balance), 0) };
     },
-    onSuccess: () => {
+    onSuccess: (savedReceipt) => {
       toast.success("Payment recorded");
+      setReceipt(savedReceipt);
       setBill(null);
       setAmount("");
       setReference("");
@@ -129,6 +137,7 @@ export function CollectPayment({ initialShopId = null }: { initialShopId?: strin
           <h2 className="text-lg font-bold">{shop.name}</h2>
           <p className="text-sm text-muted-foreground">Due: <span className="tabular font-bold text-destructive">{inr(shop.due)}</span></p>
         </div>
+        {receipt && <WhatsAppReceiptDialog open={!!receipt} onOpenChange={open => !open && setReceipt(null)} {...receipt} />}
         {shop.bills.length === 0 ? <Empty>No pending bills for this shop.</Empty> : (
           <Card className="divide-y">
             {shop.bills.map((b) => (
