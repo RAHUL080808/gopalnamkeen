@@ -19,16 +19,16 @@ export function WhatsAppReceiptDialog({ open, onOpenChange, phone, shopName, amo
   const valid = digits.length === 10 || (digits.length === 12 && digits.startsWith("91"));
   const date = new Date(paidAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
   const message = [
-    "Payment Received – Gopal Namkeen",
+    "भुगतान प्राप्ति की सूचना – Gopal Namkeen",
     "",
-    `Dear ${shopName},`,
+    `${shopName} जी,`,
     "",
-    `We have received your payment of ${inr(amount)}.`,
-    `Payment Mode: ${modeLabel(mode as any)}`,
-    `Date: ${date}`,
-    `Remaining Outstanding: ${inr(outstanding)}`,
+    `आपका ${inr(amount)} का भुगतान हमें प्राप्त हो गया है।`,
+    `भुगतान का माध्यम: ${modeLabel(mode as any)}`,
+    `दिनांक: ${date}`,
+    `बाकी बकाया राशि: ${inr(outstanding)}`,
     "",
-    "Thank you for your payment.",
+    "आपके भुगतान के लिए धन्यवाद।",
     "– Gopal Namkeen",
   ].join("\n");
   const url = valid ? `https://wa.me/${number}?text=${encodeURIComponent(message)}` : "";
