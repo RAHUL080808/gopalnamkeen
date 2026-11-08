@@ -184,6 +184,7 @@ function SectionHeading({ title, subtitle, action }: { title: string; subtitle: 
 
 function OwnerDashboard() {
   const [billDialogOpen, setBillDialogOpen] = useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["owner-dashboard"],
     queryFn: async () => {
@@ -195,14 +196,25 @@ function OwnerDashboard() {
       ]);
       const b = bills.data ?? [];
       const p = payments.data ?? [];
-      const byEmp = new Map<string, { name: string; role: string; total: number; count: number }>();
-      for (const x of p) {
+      const today = new Date().toLocaleDateString("en-CA");
+      const todaysPayments = p.filter((x) => new Date(x.paid_at).toLocaleDateString("en-CA") === today);
+      const dailyByEmp = new Map<string, { id: string; name: string; role: string; total: number; count: number; cash: number; upi: number; bank: number; cheque: number }>();
+      for (const x of todaysPayments) {
         const key = x.employee_id ?? x.employee_name ?? "unknown";
-        const e = byEmp.get(key) ?? { name: x.employee_name ?? "Team member", role: x.employee_role ?? "staff", total: 0, count: 0 };
-        e.total += Number(x.amount);
-        e.count += 1;
-        byEmp.set(key, e);
+        const e = dailyByEmp.get(key) ?? { id: key, name: x.employee_name ?? "Team member", role: x.employee_role ?? "staff", total: 0, count: 0, cash: 0, upi: 0, bank: 0, cheque: 0 };
+        const amount = Number(x.amount);
+        e.total += amount; e.count += 1;
+        if (x.mode === "cash") e.cash += amount;
+        else if (x.mode === "upi") e.upi += amount;
+        else if (x.mode === "bank_transfer") e.bank += amount;
+        else if (x.mode === "cheque") e.cheque += amount;
+        dailyByEmp.set(key, e);
       }
+      const dailyEmployees = [...dailyByEmp.values()].sort((a, z) => z.total - a.total);
+      const dailyCash = todaysPayments.filter((x) => x.mode === "cash").reduce((s, x) => s + Number(x.amount), 0);
+      const dailyUpi = todaysPayments.filter((x) => x.mode === "upi").reduce((s, x) => s + Number(x.amount), 0);
+      const dailyBank = todaysPayments.filter((x) => x.mode === "bank_transfer").reduce((s, x) => s + Number(x.amount), 0);
+      const dailyCheque = todaysPayments.filter((x) => x.mode === "cheque").reduce((s, x) => s + Number(x.amount), 0);
       const sales = b.reduce((s, x) => s + Number(x.amount), 0);
       const received = b.reduce((s, x) => s + Number(x.paid_amount), 0);
       return {
@@ -212,7 +224,12 @@ function OwnerDashboard() {
         paidBills: b.filter((x) => x.status === "paid").length,
         partialBills: b.filter((x) => x.status === "partial").length,
         totalBills: b.length,
-        employees: [...byEmp.values()].sort((a, z) => z.total - a.total),
+        employees: [...new Map(p.map((x) => {
+          const key = x.employee_id ?? x.employee_name ?? "unknown";
+          return [key, { name: x.employee_name ?? "Team member", role: x.employee_role ?? "staff", total: p.filter((y) => (y.employee_id ?? y.employee_name ?? "unknown") === key).reduce((s, y) => s + Number(y.amount), 0), count: p.filter((y) => (y.employee_id ?? y.employee_name ?? "unknown") === key).length }];
+        })).values()].sort((a, z) => z.total - a.total),
+        dailyEmployees, dailyCash, dailyUpi, dailyBank, dailyCheque,
+        dailyTotal: dailyCash + dailyUpi + dailyBank + dailyCheque,
         recent: p.slice(0, 7),
         pendingCorrections: corrections.count ?? 0,
         unallocatedAdvance: (advances.data ?? []).reduce((sum: number, x: any) => sum + Math.max(0, Number(x.amount) - (x.payment_allocations ?? []).reduce((a: number, y: any) => a + Number(y.amount), 0)), 0),
@@ -246,6 +263,37 @@ function OwnerDashboard() {
       </section>
 
       <OrderScheduler />
+
+      <section className="space-y-3">
+        <div><h2 className="text-base font-extrabold tracking-tight sm:text-lg">Daily collection</h2><p className="mt-0.5 text-xs text-muted-foreground">All team members · {new Date().toLocaleDateString("en-IN")}</p></div>
+        <Card className="p-4 sm:p-5">
+          <div className="text-xs font-semibold text-muted-foreground">Total collected today</div>
+          <div className="mt-1 text-2xl font-extrabold tracking-tight tabular">{isLoading ? "—" : inr(data?.dailyTotal ?? 0)}</div>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl bg-emerald-500/10 p-3"><div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Cash</div><div className="mt-1 text-lg font-extrabold tabular">{isLoading ? "—" : inr(data?.dailyCash ?? 0)}</div></div>
+            <div className="rounded-xl bg-sky-500/10 p-3"><div className="text-xs font-semibold text-sky-700 dark:text-sky-400">UPI</div><div className="mt-1 text-lg font-extrabold tabular">{isLoading ? "—" : inr(data?.dailyUpi ?? 0)}</div></div>
+            <div className="rounded-xl bg-blue-500/10 p-3"><div className="text-xs font-semibold text-blue-700 dark:text-blue-400">Bank transfer</div><div className="mt-1 text-lg font-extrabold tabular">{isLoading ? "—" : inr(data?.dailyBank ?? 0)}</div></div>
+            <div className="rounded-xl bg-amber-500/10 p-3"><div className="text-xs font-semibold text-amber-700 dark:text-amber-400">Cheque</div><div className="mt-1 text-lg font-extrabold tabular">{isLoading ? "—" : inr(data?.dailyCheque ?? 0)}</div></div>
+          </div>
+        </Card>
+        <div className="flex items-end justify-between gap-3"><div><h3 className="text-sm font-extrabold">Member-wise collection</h3><p className="mt-0.5 text-xs text-muted-foreground">Tap a member to see mode-wise collection</p></div><span className="text-xs text-muted-foreground">{data?.dailyEmployees.length ?? 0} members</span></div>
+        <Card className="overflow-hidden divide-y divide-border/70">
+          {isLoading ? <p className="p-4 text-sm text-muted-foreground">Loading daily collections…</p> : data?.dailyEmployees.length ? data.dailyEmployees.map((e) => (
+            <div key={e.id}>
+              <button onClick={() => setSelectedEmployeeId(selectedEmployeeId === e.id ? null : e.id)} className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-muted/30">
+                <div className="flex min-w-0 items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-extrabold text-primary">{e.name.trim().slice(0, 1).toUpperCase()}</div><div className="min-w-0"><div className="truncate text-sm font-bold">{e.name}</div><div className="mt-0.5 text-xs capitalize text-muted-foreground">{e.role} · {e.count} payments</div></div></div>
+                <div className="flex shrink-0 items-center gap-2"><span className="text-sm font-extrabold tabular text-emerald-600">{inr(e.total)}</span><ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${selectedEmployeeId === e.id ? "rotate-90" : ""}`} /></div>
+              </button>
+              {selectedEmployeeId === e.id && <div className="grid grid-cols-2 gap-2 bg-muted/25 px-4 pb-4 sm:grid-cols-4">
+                <div className="rounded-lg bg-card p-3"><div className="text-[11px] text-muted-foreground">Cash</div><div className="mt-1 text-sm font-extrabold tabular">{inr(e.cash)}</div></div>
+                <div className="rounded-lg bg-card p-3"><div className="text-[11px] text-muted-foreground">UPI</div><div className="mt-1 text-sm font-extrabold tabular">{inr(e.upi)}</div></div>
+                <div className="rounded-lg bg-card p-3"><div className="text-[11px] text-muted-foreground">Bank transfer</div><div className="mt-1 text-sm font-extrabold tabular">{inr(e.bank)}</div></div>
+                <div className="rounded-lg bg-card p-3"><div className="text-[11px] text-muted-foreground">Cheque</div><div className="mt-1 text-sm font-extrabold tabular">{inr(e.cheque)}</div></div>
+              </div>}
+            </div>
+          )) : <p className="p-4 text-sm text-muted-foreground">No collection recorded today.</p>}
+        </Card>
+      </section>
 
       <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <MetricCard label="Total sales" value={isLoading ? "—" : inr(data?.sales ?? 0)} caption="Value of all recorded bills" icon={ReceiptText} />
