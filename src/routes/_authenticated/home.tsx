@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/home")({
 function HomePage() {
   const { data: me } = useMe();
   if (me?.role === "owner") return <OwnerDashboard />;
-  if (me?.role === "driver") return <StaffDashboard />;
+  if (me?.role === "driver") return <StaffDashboard employeeId={me.id} />;
   return (
     <div className="space-y-4">
       <div className="rounded-3xl bg-gradient-to-br from-primary via-primary to-slate-800 p-5 text-primary-foreground shadow-xl shadow-primary/15 sm:p-7">
@@ -36,9 +36,32 @@ function HomePage() {
   );
 }
 
-function StaffDashboard() {
+function StaffDashboard({ employeeId }: { employeeId: string }) {
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
   const today = new Date().toLocaleDateString("en-CA");
+  const dayStart = new Date(`${today}T00:00:00`);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+  const { data: collectionPayments = [], isLoading: paymentsLoading } = useQuery({
+    queryKey: ["driver-today-collections", employeeId, today],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payments")
+        .select("amount, mode, paid_at")
+        .eq("employee_id", employeeId)
+        .eq("is_void", false)
+        .gte("paid_at", dayStart.toISOString())
+        .lt("paid_at", dayEnd.toISOString());
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const cashTotal = collectionPayments.filter((p) => p.mode === "cash").reduce((sum, p) => sum + Number(p.amount), 0);
+  const upiTotal = collectionPayments.filter((p) => p.mode === "upi").reduce((sum, p) => sum + Number(p.amount), 0);
+  const bankTotal = collectionPayments.filter((p) => p.mode === "bank_transfer").reduce((sum, p) => sum + Number(p.amount), 0);
+  const chequeTotal = collectionPayments.filter((p) => p.mode === "cheque").reduce((sum, p) => sum + Number(p.amount), 0);
+  const onlineTotal = upiTotal + bankTotal;
+  const collectionTotal = cashTotal + onlineTotal + chequeTotal;
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["staff-todays-orders", today],
     queryFn: async () => {
@@ -77,6 +100,22 @@ function StaffDashboard() {
             <div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Today's bills</div><div className="mt-1 text-xl font-extrabold tabular">{isLoading ? "—" : orders.reduce((sum, shop) => sum + shop.bills.length, 0)}</div></div>
           </div>
         </div>
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-end justify-between gap-3">
+          <div><h2 className="text-base font-extrabold tracking-tight">Today's collection</h2><p className="mt-0.5 text-xs text-muted-foreground">Payments recorded by you today</p></div>
+          <span className="text-xs font-semibold text-muted-foreground">{paymentsLoading ? "Loading…" : `${collectionPayments.length} payments`}</span>
+        </div>
+        <Card className="p-4 sm:p-5">
+          <div className="text-xs font-semibold text-muted-foreground">Total collected today</div>
+          <div className="mt-1 text-2xl font-extrabold tracking-tight tabular">{paymentsLoading ? "—" : inr(collectionTotal)}</div>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="rounded-xl bg-emerald-500/10 p-3"><div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Cash</div><div className="mt-1 text-lg font-extrabold tabular">{paymentsLoading ? "—" : inr(cashTotal)}</div></div>
+            <div className="rounded-xl bg-sky-500/10 p-3"><div className="text-xs font-semibold text-sky-700 dark:text-sky-400">Online · UPI + Bank</div><div className="mt-1 text-lg font-extrabold tabular">{paymentsLoading ? "—" : inr(onlineTotal)}</div><div className="mt-1 text-[10px] text-muted-foreground">UPI {inr(upiTotal)} · Bank {inr(bankTotal)}</div></div>
+            <div className="rounded-xl bg-amber-500/10 p-3"><div className="text-xs font-semibold text-amber-700 dark:text-amber-400">Cheque</div><div className="mt-1 text-lg font-extrabold tabular">{paymentsLoading ? "—" : inr(chequeTotal)}</div></div>
+          </div>
+        </Card>
       </section>
 
       {selectedShopId ? (
