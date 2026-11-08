@@ -97,10 +97,10 @@ function ShopDetail() {
           ))}
         </Card>
       )}
-      <div><h2 className="text-base font-extrabold tracking-tight">Payments</h2><p className="text-xs text-muted-foreground">Payment and advance history</p></div>
+      <div><h2 className="text-base font-extrabold tracking-tight">Payments</h2><p className="text-xs text-muted-foreground">Payment history</p></div>
       {pays.length === 0 ? <Empty>No payments yet.</Empty> : (
         <Card className="divide-y">
-          {pays.map((p) => (
+          {pays.map((p: any) => (
             <div key={p.id} className="flex items-center justify-between gap-3 p-3">
               <div><div className="text-sm font-semibold">{p.bills?.bill_number ?? "Without bill · Advance"} · {modeLabel(p.mode)}</div><div className="text-xs text-muted-foreground">{p.employee_name} · {fmtDateTime(p.paid_at)}</div>{p.reference && <div className="text-xs text-muted-foreground">Ref: {p.reference}</div>}{p.remarks && <div className="text-xs text-muted-foreground">Remark: {p.remarks}</div>}{p.payment_allocations?.length > 0 && <div className="text-xs text-muted-foreground">Allocated: {p.payment_allocations.map((a: any) => `${a.bills?.bill_number ?? "Bill"} ${inr(a.amount)}`).join(" · ")}</div>}</div>
               <div className={`tabular font-bold ${p.is_void ? "text-muted-foreground line-through" : "text-success"}`}>{inr(p.amount)}</div>

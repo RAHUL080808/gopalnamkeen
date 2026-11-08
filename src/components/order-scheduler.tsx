@@ -59,8 +59,8 @@ export function OrderScheduler() {
 
   const save = useMutation({
     mutationFn: async () => {
-      const existingIds = existing.map((x) => x.bill_id);
-      const removeIds = existingIds.filter((id) => !selectedSet.has(id));
+      const existingIds = existing.map((x: any) => x.bill_id as string);
+      const removeIds = existingIds.filter((id: string) => !selectedSet.has(id));
       for (const id of removeIds) {
         const { error } = await (supabase as any).from("daily_order_bills").delete().eq("bill_id", id).eq("visit_date", visitDate);
         if (error) throw error;

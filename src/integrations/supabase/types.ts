@@ -64,6 +64,83 @@ export type Database = {
           },
         ]
       }
+      daily_order_bills: {
+        Row: {
+          bill_date: string
+          bill_id: string
+          created_at: string
+          created_by: string
+          id: string
+          visit_date: string
+        }
+        Insert: {
+          bill_date: string
+          bill_id: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          visit_date: string
+        }
+        Update: {
+          bill_date?: string
+          bill_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          visit_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_order_bills_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: true
+            referencedRelation: "bills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_allocations: {
+        Row: {
+          allocated_by: string | null
+          amount: number
+          bill_id: string
+          created_at: string
+          id: string
+          payment_id: string
+        }
+        Insert: {
+          allocated_by?: string | null
+          amount: number
+          bill_id: string
+          created_at?: string
+          id?: string
+          payment_id: string
+        }
+        Update: {
+          allocated_by?: string | null
+          amount?: number
+          bill_id?: string
+          created_at?: string
+          id?: string
+          payment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_allocations_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_allocations_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_corrections: {
         Row: {
           created_at: string
@@ -120,7 +197,7 @@ export type Database = {
       payments: {
         Row: {
           amount: number
-          bill_id: string
+          bill_id: string | null
           created_at: string
           employee_id: string
           employee_name: string
@@ -130,11 +207,12 @@ export type Database = {
           mode: Database["public"]["Enums"]["payment_mode"]
           paid_at: string
           reference: string | null
+          remarks: string | null
           shop_id: string
         }
         Insert: {
           amount: number
-          bill_id: string
+          bill_id?: string | null
           created_at?: string
           employee_id?: string
           employee_name?: string
@@ -144,11 +222,12 @@ export type Database = {
           mode: Database["public"]["Enums"]["payment_mode"]
           paid_at?: string
           reference?: string | null
+          remarks?: string | null
           shop_id: string
         }
         Update: {
           amount?: number
-          bill_id?: string
+          bill_id?: string | null
           created_at?: string
           employee_id?: string
           employee_name?: string
@@ -158,6 +237,7 @@ export type Database = {
           mode?: Database["public"]["Enums"]["payment_mode"]
           paid_at?: string
           reference?: string | null
+          remarks?: string | null
           shop_id?: string
         }
         Relationships: [
