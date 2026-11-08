@@ -1,4 +1,9 @@
 # Shop Excel import
+# Driver bill amount editing
+- [ ] Add database-enforced amount-only driver edits and immutable owner-readable audit history.
+- [ ] Add driver editing and owner history to existing bill screens.
+- [ ] Test driver and owner permissions, balance/status updates and audit history.
+
 - [x] Add compatible fields and owner-only duplicate-safe import to existing shops.
 - [x] Add workbook upload, full preview and result counts to Shops.
 - [x] Test rules, owner preview on desktop/mobile, driver denial at every boundary and failed-row database handling without writing test shops.
