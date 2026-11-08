@@ -38,7 +38,7 @@ function PaymentsPage() {
 function AllPayments() {
   const { data = [] } = useQuery({
     queryKey: ["all-payments"],
-    queryFn: async () => (await supabase.from("payments").select("*, shops(name), bills(bill_number)").order("paid_at", { ascending: false }).limit(500)).data ?? [],
+    queryFn: async () => (await supabase.from("payments").select("*, shops(name), bills(bill_number), payment_allocations(amount, bills(bill_number))").order("paid_at", { ascending: false }).limit(500)).data ?? [],
   });
   if (!data.length) return <Empty>No payments yet.</Empty>;
   return (
@@ -47,7 +47,7 @@ function AllPayments() {
         <div key={p.id} className="flex items-start justify-between gap-3 p-4 transition-all hover:bg-primary/[0.035]">
           <div className="min-w-0">
             <div className="truncate font-semibold">{p.shops?.name}</div>
-            <div className="text-xs text-muted-foreground">{p.bills?.bill_number ?? "Without bill · Advance"} · {modeLabel(p.mode)}{p.reference ? ` · ${p.reference}` : ""}</div>
+            <div className="text-xs text-muted-foreground">{p.bills?.bill_number ?? ((p as any).payment_allocations?.length ? `Allocated: ${(p as any).payment_allocations.map((a: any) => `${a.bills?.bill_number ?? "Bill"} (${inr(a.amount)})`).join(", ")}` : "Without bill · Advance")} · {modeLabel(p.mode)}{p.reference ? ` · ${p.reference}` : ""}</div>
             {(p as any).remarks && <div className="mt-0.5 text-xs text-muted-foreground">Remark: {(p as any).remarks}</div>}
             <div className="text-xs text-muted-foreground"><span className="capitalize">{p.employee_name} ({p.employee_role})</span> · {fmtDateTime(p.paid_at)}</div>
           </div>
