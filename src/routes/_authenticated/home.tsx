@@ -71,7 +71,7 @@ function StaffDashboard() {
         <div className="relative">
           <div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/55">Sai Sindhu Enterprises · Driver desk</div>
           <h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Today's orders</h1>
-          <p className="mt-1 text-xs text-white/65">Bills added by the owner for today. Open a shop to see today's and older pending bills.</p>
+          <p className="mt-1 text-xs text-white/65">Orders scheduled by the owner for today's visit. Open a shop to see its pending bills.</p>
           <div className="mt-5 flex items-center gap-5 border-t border-white/10 pt-4">
             <div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Shops with orders</div><div className="mt-1 text-xl font-extrabold tabular">{isLoading ? "—" : orders.length}</div></div>
             <div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Today's bills</div><div className="mt-1 text-xl font-extrabold tabular">{isLoading ? "—" : orders.reduce((sum, shop) => sum + shop.bills.length, 0)}</div></div>
@@ -88,8 +88,8 @@ function StaffDashboard() {
       ) : (
         <>
           <section className="space-y-3">
-            <div className="flex items-end justify-between gap-3"><div><h2 className="text-base font-extrabold tracking-tight">Shops with orders today</h2><p className="mt-0.5 text-xs text-muted-foreground">Based on the bill date entered by the owner</p></div><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{orders.length} shops</span></div>
-            {isLoading ? <Card className="p-5 text-sm text-muted-foreground">Loading today's orders…</Card> : orders.length === 0 ? <Empty>No bills dated today yet.</Empty> : (
+            <div className="flex items-end justify-between gap-3"><div><h2 className="text-base font-extrabold tracking-tight">Shops with orders today</h2><p className="mt-0.5 text-xs text-muted-foreground">Based on the visit date selected by the owner</p></div><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{orders.length} shops</span></div>
+            {isLoading ? <Card className="p-5 text-sm text-muted-foreground">Loading today's orders…</Card> : orders.length === 0 ? <Empty>No orders scheduled for today yet.</Empty> : (
               <Card className="divide-y divide-border/70 overflow-hidden">
                 {orders.map((shop) => (
                   <button key={shop.id} onClick={() => setSelectedShopId(shop.id)} className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-primary/[0.035]">
