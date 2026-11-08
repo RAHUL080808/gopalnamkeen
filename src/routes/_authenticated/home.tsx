@@ -110,11 +110,13 @@ function StaffDashboard({ employeeId }: { employeeId: string }) {
         <Card className="p-4 sm:p-5">
           <div className="text-xs font-semibold text-muted-foreground">Total collected today</div>
           <div className="mt-1 text-2xl font-extrabold tracking-tight tabular">{paymentsLoading ? "—" : inr(collectionTotal)}</div>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-xl bg-emerald-500/10 p-3"><div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Cash</div><div className="mt-1 text-lg font-extrabold tabular">{paymentsLoading ? "—" : inr(cashTotal)}</div></div>
-            <div className="rounded-xl bg-sky-500/10 p-3"><div className="text-xs font-semibold text-sky-700 dark:text-sky-400">Online · UPI + Bank</div><div className="mt-1 text-lg font-extrabold tabular">{paymentsLoading ? "—" : inr(onlineTotal)}</div><div className="mt-1 text-[10px] text-muted-foreground">UPI {inr(upiTotal)} · Bank {inr(bankTotal)}</div></div>
+            <div className="rounded-xl bg-sky-500/10 p-3"><div className="text-xs font-semibold text-sky-700 dark:text-sky-400">UPI</div><div className="mt-1 text-lg font-extrabold tabular">{paymentsLoading ? "—" : inr(upiTotal)}</div></div>
+            <div className="rounded-xl bg-blue-500/10 p-3"><div className="text-xs font-semibold text-blue-700 dark:text-blue-400">Bank transfer</div><div className="mt-1 text-lg font-extrabold tabular">{paymentsLoading ? "—" : inr(bankTotal)}</div></div>
             <div className="rounded-xl bg-amber-500/10 p-3"><div className="text-xs font-semibold text-amber-700 dark:text-amber-400">Cheque</div><div className="mt-1 text-lg font-extrabold tabular">{paymentsLoading ? "—" : inr(chequeTotal)}</div></div>
           </div>
+          <div className="mt-3 flex items-center justify-between border-t border-border/70 pt-3 text-sm"><span className="font-semibold text-muted-foreground">Online total (UPI + Bank)</span><span className="font-extrabold tabular">{paymentsLoading ? "—" : inr(onlineTotal)}</span></div>
         </Card>
       </section>
 
