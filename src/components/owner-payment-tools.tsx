@@ -177,7 +177,7 @@ export function OwnerPaymentTools() {
                 <SelectTrigger><SelectValue placeholder="Choose payment" /></SelectTrigger>
                 <SelectContent>{paymentsToAdjust.map(a => {
                   const left = Number(a.amount) - a.payment_allocations.reduce((s,x) => s + Number(x.amount),0);
-                  return left > 0 ? <SelectItem key={a.id} value={a.id}>{a.shops?.name ?? "Shop"} · {inr(left)} available · {fmtDateTime(a.paid_at)}</SelectItem> : null;
+                  return left > 0 || a.payment_allocations.length > 0 ? <SelectItem key={a.id} value={a.id}>{a.shops?.name ?? "Shop"} · {inr(left)} unassigned · {fmtDateTime(a.paid_at)}</SelectItem> : null;
                 })}</SelectContent>
               </Select>
             </div>
