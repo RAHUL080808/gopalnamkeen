@@ -42,7 +42,7 @@ function StaffDashboard() {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["staff-todays-orders", today],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("daily_order_bills")
         .select("bill_id, bills!inner(id, bill_number, bill_date, amount, balance, shop_id, shops!inner(id, name))")
         .eq("visit_date", today)
