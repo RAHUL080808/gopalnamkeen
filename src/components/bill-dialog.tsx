@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 type EditBill = { id: string; shop_id: string; bill_date: string; amount: number; notes: string | null; paid_amount: number };
 
-export function BillDialog({ open, onOpenChange, shopId, bill }: { open: boolean; onOpenChange: (o: boolean) => void; shopId?: string; bill?: EditBill }) {
+export function BillDialog({ open, onOpenChange, shopId, bill, driverMode = false }: { open: boolean; onOpenChange: (o: boolean) => void; shopId?: string; bill?: EditBill; driverMode?: boolean }) {
   const qc = useQueryClient();
   const today = new Date().toLocaleDateString("en-CA");
   const [shop, setShop] = useState(bill?.shop_id ?? shopId ?? "");
@@ -32,10 +32,21 @@ export function BillDialog({ open, onOpenChange, shopId, bill }: { open: boolean
       if (!(amt > 0)) throw new Error("Enter a valid amount");
       if (bill && amt < Number(bill.paid_amount)) throw new Error("Amount cannot be less than already paid");
       const row = { shop_id: shop, bill_date: date, amount: amt, notes: notes.trim() || null };
-      const { error } = bill
-        ? await supabase.from("bills").update({ bill_date: date, amount: amt, notes: row.notes }).eq("id", bill.id)
-        : await supabase.from("bills").insert(row);
-      if (error) throw error;
+      if (bill) {
+        const { error } = await supabase.from("bills").update({ bill_date: date, amount: amt, notes: row.notes }).eq("id", bill.id);
+        if (error) throw error;
+      } else if (driverMode) {
+        const { error } = await (supabase.rpc as any)("driver_create_bill", {
+          _shop_id: shop,
+          _bill_date: date,
+          _amount: amt,
+          _notes: row.notes,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("bills").insert(row);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       toast.success(bill ? "Bill updated" : "Bill created");
@@ -49,7 +60,7 @@ export function BillDialog({ open, onOpenChange, shopId, bill }: { open: boolean
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader><DialogTitle>{bill ? "Edit bill" : "Add bill"}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{bill ? "Edit bill" : driverMode ? "Add delivery bill" : "Add bill"}</DialogTitle></DialogHeader>
         <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); m.mutate(); }}>
           {!shopId && !bill && (
             <div className="space-y-1.5">
@@ -63,7 +74,7 @@ export function BillDialog({ open, onOpenChange, shopId, bill }: { open: boolean
           <div className="space-y-1.5"><Label>Bill date</Label><Input type="date" required value={date} onChange={(e) => setDate(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>Bill amount (₹)</Label><Input type="number" inputMode="decimal" step="0.01" min="0.01" required value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>Notes</Label><Input maxLength={200} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
-          <p className="text-xs text-muted-foreground">Bill number is generated automatically.</p>
+          <p className="text-xs text-muted-foreground">{driverMode ? "Delivery bill will be recorded under your account. Bill number is generated automatically." : "Bill number is generated automatically."}</p>
           <Button type="submit" className="w-full" disabled={m.isPending}>Save bill</Button>
         </form>
       </DialogContent>
