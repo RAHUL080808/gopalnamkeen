@@ -189,7 +189,7 @@ function OwnerDashboard() {
     queryKey: ["owner-dashboard"],
     queryFn: async () => {
       const [bills, payments, corrections, advances] = await Promise.all([
-        supabase.from("bills").select("id, amount, paid_amount, balance, status"),
+        supabase.from("bills").select("id, amount, paid_amount, balance, status, bill_date, bill_number, shop_id, shops(name)"),
         supabase.from("payments").select("id, amount, mode, paid_at, employee_id, employee_name, employee_role, is_void, shops(name)").eq("is_void", false).order("paid_at", { ascending: false }),
         supabase.from("payment_corrections").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("payments").select("amount, payment_allocations(amount)").is("bill_id", null).eq("is_void", false),
@@ -216,9 +216,25 @@ function OwnerDashboard() {
       const dailyBank = todaysPayments.filter((x) => x.mode === "bank_transfer").reduce((s, x) => s + Number(x.amount), 0);
       const dailyCheque = todaysPayments.filter((x) => x.mode === "cheque").reduce((s, x) => s + Number(x.amount), 0);
       const sales = b.reduce((s, x) => s + Number(x.amount), 0);
+      const now = new Date();
+      const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+      const overdueBills = b
+        .filter((x: any) => Number(x.balance) > 0)
+        .map((x: any) => {
+          const [y, m, d] = String(x.bill_date).split("-").map(Number);
+          const age = Math.floor((todayUtc - Date.UTC(y, m - 1, d)) / 86400000);
+          return { ...x, age };
+        })
+        .filter((x: any) => x.age >= 7)
+        .sort((a: any, z: any) => z.age - a.age);
       const received = b.reduce((s, x) => s + Number(x.paid_amount), 0);
       return {
         sales, received,
+        overdueBills,
+        overdue7: overdueBills.length,
+        overdue15: overdueBills.filter((x: any) => x.age >= 15).length,
+        overdue30: overdueBills.filter((x: any) => x.age >= 30).length,
+        overdueAmount: overdueBills.reduce((sum: number, x: any) => sum + Number(x.balance), 0),
         outstanding: b.reduce((s, x) => s + Number(x.balance), 0),
         unpaid: b.filter((x) => x.status !== "paid").length,
         paidBills: b.filter((x) => x.status === "paid").length,
@@ -263,6 +279,30 @@ function OwnerDashboard() {
       </section>
 
       <OrderScheduler />
+
+      <section className="space-y-3">
+        <div className="flex items-end justify-between gap-3">
+          <div><h2 className="text-base font-extrabold tracking-tight sm:text-lg">Overdue payment alerts</h2><p className="mt-0.5 text-xs text-muted-foreground">Unpaid bill balances · calculated from bill date</p></div>
+          <Link to="/bills" className="text-xs font-bold text-primary hover:underline">View bills →</Link>
+        </div>
+        <Card className="p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div><p className="text-xs font-semibold text-muted-foreground">Overdue outstanding (7+ days)</p><p className="mt-1 text-2xl font-extrabold tabular text-destructive">{isLoading ? "—" : inr(data?.overdueAmount ?? 0)}</p></div>
+            <div className="rounded-xl bg-rose-500/10 p-3 text-rose-600"><Clock3 className="h-5 w-5" /></div>
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-2 border-t border-border/70 pt-4">
+            <div><div className="text-[11px] text-muted-foreground">7+ days</div><div className="mt-1 text-lg font-extrabold tabular">{isLoading ? "—" : data?.overdue7 ?? 0}</div></div>
+            <div><div className="text-[11px] text-muted-foreground">15+ days</div><div className="mt-1 text-lg font-extrabold tabular text-amber-600">{isLoading ? "—" : data?.overdue15 ?? 0}</div></div>
+            <div><div className="text-[11px] text-muted-foreground">30+ days</div><div className="mt-1 text-lg font-extrabold tabular text-destructive">{isLoading ? "—" : data?.overdue30 ?? 0}</div></div>
+          </div>
+          {data?.overdueBills?.length ? <div className="mt-3 divide-y divide-border/70 border-t border-border/70">
+            {data.overdueBills.slice(0, 5).map((bill: any) => <Link key={bill.id} to="/shops/$id" params={{ id: bill.shop_id }} className="flex items-center justify-between gap-3 py-3">
+              <div className="min-w-0"><div className="truncate text-sm font-bold">{bill.shops?.name ?? "Shop"}</div><div className="text-xs text-muted-foreground">{bill.bill_number} · {bill.age} days old</div></div>
+              <div className="shrink-0 text-right"><div className="text-sm font-extrabold tabular text-destructive">{inr(bill.balance)}</div><div className="text-[10px] text-muted-foreground">pending</div></div>
+            </Link>)}
+          </div> : <p className="mt-3 border-t border-border/70 pt-3 text-xs text-muted-foreground">{isLoading ? "Checking overdue bills…" : "No bills overdue by 7 or more days."}</p>}
+        </Card>
+      </section>
 
       <section className="space-y-3">
         <div><h2 className="text-base font-extrabold tracking-tight sm:text-lg">Daily collection</h2><p className="mt-0.5 text-xs text-muted-foreground">All team members · {new Date().toLocaleDateString("en-IN")}</p></div>
