@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Search, Upload } from "lucide-react";
+import { Plus, Search, Upload, X } from "lucide-react";
 import { ShopImportDialog } from "@/components/shop-import-dialog";
 import { useMe } from "@/lib/session";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,17 +42,44 @@ function ShopsPage() {
       return (s ?? []).map((x) => ({ ...x, due: (b ?? []).filter((y) => y.shop_id === x.id).reduce((t, y) => t + Number(y.balance), 0) }));
     },
   });
-  const list = useMemo(() => shops.filter((s) => s.name.toLowerCase().includes(q.toLowerCase())), [shops, q]);
+  const list = useMemo(() => {
+    const term = q.trim().toLocaleLowerCase();
+    if (!term) return shops;
+    const digits = term.replace(/\\D/g, "");
+    return shops.filter((s) => {
+      const searchable = [s.name, s.contact_name, s.phone, s.address]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase();
+      const phoneDigits = String(s.phone ?? "").replace(/\\D/g, "");
+      return searchable.includes(term) || (digits.length >= 2 && phoneDigits.includes(digits));
+    });
+  }, [shops, q]);
 
   return (
     <div className="space-y-5">
       <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#132443] via-[#20395f] to-[#315477] p-5 text-white shadow-xl shadow-slate-900/10 sm:p-7"><div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full border-[25px] border-white/[0.06]" /><div className="relative flex items-end justify-between gap-3"><div><div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/55">Customer directory</div><h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Shops</h1><p className="mt-1 text-xs text-white/65">Manage retailer profiles and keep track of pending balances.</p></div><Button className="shrink-0 rounded-xl bg-white text-slate-900 shadow-lg hover:bg-slate-100" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Add shop</Button></div><div className="relative mt-5 flex gap-5 border-t border-white/10 pt-4"><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Total shops</div><div className="mt-1 text-xl font-extrabold tabular">{shops.length}</div></div><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Total outstanding</div><div className="mt-1 text-xl font-extrabold tabular text-amber-200">{inr(shops.reduce((sum, s) => sum + s.due, 0))}</div></div></div></div>
       {me?.role === "owner" && <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="h-4 w-4" /> Import Excel</Button>}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input placeholder="Search shop" value={q} onChange={(e) => setQ(e.target.value)} className="h-12 rounded-2xl border-border/70 bg-card pl-10 shadow-sm focus-visible:ring-primary/20" />
+      <div className="space-y-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by shop name, mobile or contact person"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="h-12 rounded-2xl border-border/70 bg-card pl-10 pr-11 shadow-sm focus-visible:ring-primary/20"
+          />
+          {q && (
+            <Button type="button" variant="ghost" size="icon" aria-label="Clear search" onClick={() => setQ("")} className="absolute right-1.5 top-1/2 h-9 w-9 -translate-y-1/2 rounded-xl">
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        <p className="px-1 text-xs text-muted-foreground">
+          {q.trim() ? `${list.length} matching shop${list.length === 1 ? "" : "s"}` : "Search using shop name, mobile number, contact person or area."}
+        </p>
       </div>
-      {list.length === 0 ? <Empty>No shops yet. Add your first shop.</Empty> : (
+      {list.length === 0 ? <Empty>{q.trim() ? "No matching shop found. Check the name or mobile number." : "No shops yet. Add your first shop."}</Empty> : (
         <Card className="divide-y divide-border/60 overflow-hidden">
           {list.map((s) => (
             <Link key={s.id} to="/shops/$id" params={{ id: s.id }} className="group flex items-center justify-between gap-3 p-4 transition-all hover:bg-primary/[0.035]">
