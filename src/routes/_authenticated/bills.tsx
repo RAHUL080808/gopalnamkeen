@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Plus, Pencil, CalendarDays, ReceiptText } from "lucide-react";
+import { Plus, Pencil, CalendarDays, ReceiptText, Clock3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { inr, fmtDate } from "@/lib/format";
 import { Card, Empty, StatusBadge } from "@/components/bits";
@@ -21,6 +21,7 @@ const FILTERS = [
   { v: "unpaid", l: "Unpaid" },
   { v: "partial", l: "Partial" },
   { v: "paid", l: "Paid" },
+  { v: "overdue", l: "Overdue 7+ days" },
 ];
 
 function BillsPage() {
@@ -33,7 +34,12 @@ function BillsPage() {
     queryKey: ["bills"],
     queryFn: async () => (await supabase.from("bills").select("*, shops(name)").order("bill_date", { ascending: false }).order("created_at", { ascending: false })).data ?? [],
   });
-  const list = [...(filter === "all" ? bills : bills.filter((b) => b.status === filter))]
+  const todayUtc = new Date();
+  const ageInDays = (date: string) => {
+    const [y, m, d] = date.split("-").map(Number);
+    return Math.floor((Date.UTC(todayUtc.getFullYear(), todayUtc.getMonth(), todayUtc.getDate()) - Date.UTC(y, m - 1, d)) / 86400000);
+  };
+  const list = [...(filter === "all" ? bills : filter === "overdue" ? bills.filter((b) => Number(b.balance) > 0 && ageInDays(b.bill_date) >= 7) : bills.filter((b) => b.status === filter))]
     .filter((b) => !selectedDate || b.bill_date === selectedDate);
 
   return (
@@ -55,7 +61,7 @@ function BillsPage() {
           {list.map((b) => (
             <div key={b.id} className="group flex items-center gap-3 p-4 transition-all hover:bg-primary/[0.035]">
               <Link to="/shops/$id" params={{ id: b.shop_id }} className="min-w-0 flex-1">
-                <div className="flex items-center gap-2"><span className="font-extrabold tracking-tight transition-colors group-hover:text-primary">{b.bill_number}</span><StatusBadge status={b.status} /></div>
+                <div className="flex items-center gap-2"><span className="font-extrabold tracking-tight transition-colors group-hover:text-primary">{b.bill_number}</span><StatusBadge status={b.status} />{Number(b.balance) > 0 && ageInDays(b.bill_date) >= 7 && <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-bold text-rose-600"><Clock3 className="h-3 w-3" /> {ageInDays(b.bill_date)}d overdue</span>}</div>
                 <div className="mt-1 truncate text-xs text-muted-foreground">{b.shops?.name} · {fmtDate(b.bill_date)}</div>
               </Link>
               <div className="shrink-0 text-right">
