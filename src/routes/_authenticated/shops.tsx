@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Search, Upload, X } from "lucide-react";
+import { Phone, Plus, Search, Upload, X } from "lucide-react";
 import { ShopImportDialog } from "@/components/shop-import-dialog";
 import { useMe } from "@/lib/session";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,13 +82,16 @@ function ShopsPage() {
       {list.length === 0 ? <Empty>{q.trim() ? "No matching shop found. Check the name or mobile number." : "No shops yet. Add your first shop."}</Empty> : (
         <Card className="divide-y divide-border/60 overflow-hidden">
           {list.map((s) => (
-            <Link key={s.id} to="/shops/$id" params={{ id: s.id }} className="group flex items-center justify-between gap-3 p-4 transition-all hover:bg-primary/[0.035]">
-              <div className="min-w-0">
-                <div className="truncate font-extrabold tracking-tight transition-colors group-hover:text-primary">{s.name}</div>
-                <div className="truncate text-xs text-muted-foreground">{[s.contact_name, s.phone].filter(Boolean).join(" · ") || "—"}</div>
-              </div>
-              <div className="shrink-0 text-right"><div className={`tabular font-bold ${s.due > 0 ? "text-destructive" : "text-success"}`}>{inr(s.due)}</div></div>
-            </Link>
+            <div key={s.id} className="flex items-center gap-2 p-3 transition-all hover:bg-primary/[0.035]">
+              <Link to="/shops/$id" params={{ id: s.id }} className="group flex min-w-0 flex-1 items-center justify-between gap-3 p-1">
+                <div className="min-w-0">
+                  <div className="truncate font-extrabold tracking-tight transition-colors group-hover:text-primary">{s.name}</div>
+                  <div className="truncate text-xs text-muted-foreground">{[s.contact_name, s.phone].filter(Boolean).join(" · ") || "—"}</div>
+                </div>
+                <div className="shrink-0 text-right"><div className={`tabular font-bold ${s.due > 0 ? "text-destructive" : "text-success"}`}>{inr(s.due)}</div></div>
+              </Link>
+              {s.phone && <a href={`tel:${String(s.phone).replace(/[^\\d+]/g, "")}`} aria-label={`Call ${s.name}`} title="Call shop" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-primary transition hover:bg-primary/10"><Phone className="h-4 w-4" /></a>}
+            </div>
           ))}
         </Card>
       )}
