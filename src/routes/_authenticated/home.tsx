@@ -93,7 +93,7 @@ function StaffDashboard({ employeeId }: { employeeId: string }) {
         <div className="pointer-events-none absolute -right-14 -top-16 h-52 w-52 rounded-full border-[28px] border-white/[0.07]" />
         <div className="pointer-events-none absolute -bottom-20 right-20 h-40 w-40 rounded-full bg-white/[0.04] blur-2xl" />
         <div className="relative">
-          <div className="flex items-center justify-between gap-3"><span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-50">Driver workspace</span><span className="text-[11px] font-semibold text-white/65">{new Date().toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}</span></div>
+          <div className="flex items-center justify-between gap-3"><span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-50">Field workspace</span><span className="text-[11px] font-semibold text-white/65">{new Date().toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}</span></div>
           <h1 className="mt-4 text-[26px] font-extrabold leading-tight tracking-tight">Your work, <span className="text-emerald-200">made simple.</span></h1>
           <p className="mt-1 max-w-xs text-xs leading-relaxed text-white/70">Today's shop visits, collections and delivery bills in one place.</p>
           <div className="mt-5 grid grid-cols-2 gap-3">
