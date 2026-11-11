@@ -83,39 +83,44 @@ function ShopDetail() {
         {(me?.role === "owner" || me?.role === "driver") && <Button size="sm" onClick={() => setBillOpen(true)}><Plus className="h-4 w-4" /> {me?.role === "driver" ? "Add delivery bill" : "New bill"}</Button>}
       </div>
       {bills.length === 0 ? <Empty>No bills yet.</Empty> : (
-        <Card className="divide-y">
+        <div className="grid gap-3 sm:grid-cols-2">
           {bills.map((b) => (
-            <div key={b.id} className="flex items-center justify-between gap-3 p-3">
-              <div><div className="font-semibold">{b.bill_number}</div><div className="text-xs text-muted-foreground">{fmtDate(b.bill_date)} · {inr(b.amount)}</div></div>
-              <div className="text-right"><div className="tabular font-bold">{inr(b.balance)}</div><StatusBadge status={b.status} /></div>
-              {me?.role === "driver" && (
-                <Button type="button" variant="outline" size="sm" onClick={() => setDriverEditBill({ id: b.id, bill_number: b.bill_number, amount: Number(b.amount), paid_amount: Number(b.paid_amount) })}>
-                  <Pencil className="h-4 w-4" /> Edit amount
-                </Button>
-              )}
-              {me?.role === "owner" && (
-                <div className="flex items-center gap-1">
-                  <Button type="button" variant="ghost" size="icon" aria-label="Edit bill" onClick={() => setEditBill(b)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <DeleteBillButton billId={b.id} billNumber={b.bill_number} />
-                </div>
-              )}
-            </div>
+            <Card key={b.id} className="relative overflow-hidden border-border/70 p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div className={`absolute inset-x-0 top-0 h-1 ${b.status === "paid" ? "bg-emerald-500" : Number(b.paid_amount) > 0 ? "bg-amber-400" : "bg-rose-400"}`} />
+              <div className="flex items-start justify-between gap-3 pt-1">
+                <div className="min-w-0"><div className="font-extrabold tracking-tight">{b.bill_number}</div><div className="mt-1 text-xs text-muted-foreground">{fmtDate(b.bill_date)}</div></div>
+                <StatusBadge status={b.status} />
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-muted/45 p-3">
+                <div><div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Bill amount</div><div className="mt-1 text-sm font-bold tabular-nums">{inr(b.amount)}</div></div>
+                <div><div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Balance due</div><div className="mt-1 text-sm font-extrabold tabular-nums">{inr(b.balance)}</div></div>
+              </div>
+              {(me?.role === "owner" || me?.role === "driver") && <div className="mt-3 flex justify-end gap-2">
+                {me?.role === "driver" && <Button type="button" variant="outline" size="sm" onClick={() => setDriverEditBill({ id: b.id, bill_number: b.bill_number, amount: Number(b.amount), paid_amount: Number(b.paid_amount) })}><Pencil className="h-4 w-4" /> Edit amount</Button>}
+                {me?.role === "owner" && <><Button type="button" variant="outline" size="sm" onClick={() => setEditBill(b)}><Pencil className="h-4 w-4" /> Edit</Button><DeleteBillButton billId={b.id} billNumber={b.bill_number} /></>}
+              </div>}
+            </Card>
           ))}
-        </Card>
+        </div>
       )}
       {me?.role === "owner" && amountEdits.length > 0 && <section className="space-y-2"><div><h2 className="text-base font-extrabold tracking-tight">Bill amount edit history</h2><p className="text-xs text-muted-foreground">Changes made by drivers</p></div><Card className="divide-y">{amountEdits.map((entry: any) => <div key={entry.id} className="flex items-center justify-between gap-3 p-3"><div><div className="text-sm font-semibold">{entry.bills?.bill_number ?? "Bill"} · {fmtDateTime(entry.edited_at)}</div><div className="text-xs text-muted-foreground">Edited by user {String(entry.edited_by).slice(0, 8)}</div></div><div className="text-right text-sm"><div className="text-muted-foreground line-through">{inr(entry.old_amount)}</div><div className="font-bold">{inr(entry.new_amount)}</div></div></div>)}</Card></section>}
       <div><h2 className="text-base font-extrabold tracking-tight">Payments</h2><p className="text-xs text-muted-foreground">Payment history</p></div>
       {pays.length === 0 ? <Empty>No payments yet.</Empty> : (
-        <Card className="divide-y">
+        <div className="grid gap-3 sm:grid-cols-2">
           {pays.map((p: any) => (
-            <div key={p.id} className="flex items-center justify-between gap-3 p-3">
-              <div><div className="text-sm font-semibold">{p.bills?.bill_number ?? "Without bill · Advance"} · {modeLabel(p.mode)}</div><div className="text-xs text-muted-foreground">{p.employee_name} · {fmtDateTime(p.paid_at)}</div>{p.reference && <div className="text-xs text-muted-foreground">Ref: {p.reference}</div>}{p.remarks && <div className="text-xs text-muted-foreground">Remark: {p.remarks}</div>}{p.payment_allocations?.length > 0 && <div className="text-xs text-muted-foreground">Allocated: {p.payment_allocations.map((a: any) => `${a.bills?.bill_number ?? "Bill"} ${inr(a.amount)}`).join(" · ")}</div>}</div>
-              <div className={`tabular font-bold ${p.is_void ? "text-muted-foreground line-through" : "text-success"}`}>{inr(p.amount)}</div>
-            </div>
+            <Card key={p.id} className="border-border/70 p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0"><div className="truncate text-sm font-bold">{p.bills?.bill_number ?? "Advance payment"}</div><div className="mt-1 text-xs text-muted-foreground">{modeLabel(p.mode)} · {fmtDateTime(p.paid_at)}</div></div>
+                <div className={`shrink-0 text-base font-extrabold tabular-nums ${p.is_void ? "text-muted-foreground line-through" : "text-success"}`}>{inr(p.amount)}</div>
+              </div>
+              <div className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+                <div>{p.employee_name}{p.is_void ? " · Voided" : ""}{p.reference ? ` · Ref: ${p.reference}` : ""}</div>
+                {p.remarks && <div className="mt-1">Remark: {p.remarks}</div>}
+                {p.payment_allocations?.length > 0 && <div className="mt-1">Allocated: {p.payment_allocations.map((a: any) => `${a.bills?.bill_number ?? "Bill"} ${inr(a.amount)}`).join(" · ")}</div>}
+              </div>
+            </Card>
           ))}
-        </Card>
+        </div>
       )}
       <BillDialog open={billOpen} onOpenChange={setBillOpen} shopId={id} driverMode={me?.role === "driver"} />
       {editBill && <BillDialog key={editBill.id} open onOpenChange={(o) => !o && setEditBill(null)} bill={editBill} />}
