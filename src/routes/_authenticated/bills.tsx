@@ -57,26 +57,31 @@ function BillsPage() {
         <button onClick={() => setSelectedDate("")} className={cn("rounded-xl border px-4 py-2.5 text-xs font-semibold transition-colors", !selectedDate ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:bg-muted")}>All dates</button>
       </div>
       {list.length === 0 ? <Empty><div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-2xl bg-muted"><ReceiptText className="h-5 w-5" /></div><div className="font-semibold text-foreground">No bills found</div><div className="mt-1">Try another date or clear the filters.</div></Empty> : (
-        <Card className="divide-y divide-border/70 overflow-hidden">
+        <div className="space-y-2">
           {list.map((b) => (
-            <div key={b.id} className="group flex items-center gap-3 p-4 transition-all hover:bg-primary/[0.035]">
-              <Link to="/shops/$id" params={{ id: b.shop_id }} className="min-w-0 flex-1">
-                <div className="flex items-center gap-2"><span className="font-extrabold tracking-tight transition-colors group-hover:text-primary">{b.bill_number}</span><StatusBadge status={b.status} />{Number(b.balance) > 0 && ageInDays(b.bill_date) >= 7 && <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-bold text-rose-600"><Clock3 className="h-3 w-3" /> {ageInDays(b.bill_date)}d overdue</span>}</div>
-                <div className="mt-1 truncate text-xs text-muted-foreground">{b.shops?.name} · {fmtDate(b.bill_date)}</div>
-              </Link>
-              <div className="shrink-0 text-right">
-                <div className="tabular text-sm font-extrabold tracking-tight">{inr(b.amount)}</div>
-                <div className="tabular text-xs text-destructive">Bal {inr(b.balance)}</div>
-              </div>
-              {me?.role === "owner" && (
-                <div className="flex items-center gap-1">
-                  <button aria-label="Edit bill" onClick={() => setEdit(b)} className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><Pencil className="h-4 w-4" /></button>
-                  <DeleteBillButton billId={b.id} billNumber={b.bill_number} />
+            <Card key={b.id} className="group overflow-hidden transition-all duration-200 hover:border-emerald-200 hover:shadow-md">
+              <div className="flex items-center gap-3 p-3.5 sm:p-4">
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${b.status === "paid" ? "bg-emerald-50 text-emerald-700" : b.status === "partial" ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700"}`}><ReceiptText className="h-[18px] w-[18px]" /></span>
+                <Link to="/shops/$id" params={{ id: b.shop_id }} className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2"><span className="font-extrabold tracking-tight text-slate-900 transition-colors group-hover:text-emerald-800">{b.bill_number}</span><StatusBadge status={b.status} />{Number(b.balance) > 0 && ageInDays(b.bill_date) >= 7 && <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700"><Clock3 className="h-3 w-3" /> {ageInDays(b.bill_date)}d overdue</span>}</div>
+                  <div className="mt-1 truncate text-xs text-slate-500">{b.shops?.name} <span className="text-slate-300">·</span> {fmtDate(b.bill_date)}</div>
+                </Link>
+                <div className="shrink-0 text-right">
+                  <div className="tabular text-sm font-extrabold tracking-tight text-slate-900">{inr(b.amount)}</div>
+                  <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Balance</div>
+                  <div className="tabular text-xs font-bold text-rose-700">{inr(b.balance)}</div>
                 </div>
-              )}
-            </div>
+                {me?.role === "owner" && (
+                  <div className="flex shrink-0 items-center gap-0.5 border-l border-slate-100 pl-1">
+                    <button aria-label="Edit bill" onClick={() => setEdit(b)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-800"><Pencil className="h-4 w-4" /></button>
+                    <DeleteBillButton billId={b.id} billNumber={b.bill_number} />
+                  </div>
+                )}
+              </div>
+              <div className={`h-1 ${b.status === "paid" ? "bg-emerald-400" : b.status === "partial" ? "bg-amber-400" : "bg-rose-300"}`} />
+            </Card>
           ))}
-        </Card>
+        </div>
       )}
       <BillDialog open={open} onOpenChange={setOpen} />
       {edit && <BillDialog key={edit.id} open onOpenChange={(o) => !o && setEdit(null)} bill={edit} />}
