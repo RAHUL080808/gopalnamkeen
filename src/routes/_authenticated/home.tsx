@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ElementType, ReactNode } from "react";
 import { useState } from "react";
 import {
-  ArrowDownToLine, ArrowUpRight, Banknote, CalendarDays, CheckCircle2, Plus,
+  ArrowDownToLine, ArrowUpRight, HandCoins, Banknote, CalendarDays, CheckCircle2, Plus,
   Clock3, FileText, ReceiptText, Store, TrendingUp, Users, WalletCards, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
