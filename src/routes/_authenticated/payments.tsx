@@ -42,19 +42,31 @@ function AllPayments() {
   });
   if (!data.length) return <Empty>No payments yet.</Empty>;
   return (
-    <Card className="divide-y divide-border/60 overflow-hidden">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {data.map((p) => (
-        <div key={p.id} className="flex items-start justify-between gap-3 p-4 transition-all hover:bg-primary/[0.035]">
-          <div className="min-w-0">
-            <div className="truncate font-semibold">{p.shops?.name}</div>
-            <div className="text-xs text-muted-foreground">{p.bills?.bill_number ?? ((p as any).payment_allocations?.length ? `Allocated: ${(p as any).payment_allocations.map((a: any) => `${a.bills?.bill_number ?? "Bill"} (${inr(a.amount)})`).join(", ")}` : "Without Bill Payment")} · {modeLabel(p.mode)}{p.reference ? ` · ${p.reference}` : ""}</div>
-            {(p as any).remarks && <div className="mt-0.5 text-xs text-muted-foreground">Remark: {(p as any).remarks}</div>}
-            <div className="text-xs text-muted-foreground"><span className="capitalize">{p.employee_name} ({p.employee_role})</span> · {fmtDateTime(p.paid_at)}</div>
+        <Card key={p.id} className="group relative overflow-hidden border-border/70 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md">
+          <div className={cn("absolute inset-x-0 top-0 h-1", p.is_void ? "bg-muted-foreground/40" : "bg-gradient-to-r from-emerald-500 to-teal-400")} />
+          <div className="flex items-start justify-between gap-3 pt-1">
+            <div className="min-w-0">
+              <div className="truncate text-sm font-bold">{p.shops?.name ?? "Unknown shop"}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{p.bills?.bill_number ?? ((p as any).payment_allocations?.length ? "Allocated payment" : "Advance payment")}</div>
+            </div>
+            <div className={cn("shrink-0 text-right text-base font-extrabold tabular-nums", p.is_void ? "text-muted-foreground line-through" : "text-success")}>{inr(p.amount)}</div>
           </div>
-          <div className={cn("tabular font-bold", p.is_void ? "text-muted-foreground line-through" : "text-success")}>{inr(p.amount)}</div>
-        </div>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold">{modeLabel(p.mode)}</span>
+            {p.is_void && <span className="rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-bold text-destructive">Voided</span>}
+            {p.reference && <span className="max-w-full truncate rounded-full bg-muted px-2.5 py-1 text-[11px] text-muted-foreground">Ref: {p.reference}</span>}
+          </div>
+          {(p as any).payment_allocations?.length > 0 && <div className="mt-2 rounded-xl bg-muted/50 p-2.5 text-xs text-muted-foreground">Allocated to: {(p as any).payment_allocations.map((a: any) => `${a.bills?.bill_number ?? "Bill"} · ${inr(a.amount)}`).join("  /  ")}</div>}
+          {(p as any).remarks && <div className="mt-2 text-xs text-muted-foreground">Remark: {(p as any).remarks}</div>}
+          <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
+            <span className="min-w-0 truncate capitalize">{p.employee_name} · {p.employee_role}</span>
+            <span className="shrink-0">{fmtDateTime(p.paid_at)}</span>
+          </div>
+        </Card>
       ))}
-    </Card>
+    </div>
   );
 }
 
