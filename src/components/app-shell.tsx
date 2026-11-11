@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { Home, Store, FileText, IndianRupee, Users, HandCoins, History, LogOut, Wallet, Sparkles } from "lucide-react";
+import { Home, Store, FileText, IndianRupee, Users, HandCoins, History, LogOut, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMe } from "@/lib/session";
 
@@ -42,29 +42,28 @@ export function AppShell({ children }: { children: ReactNode }) {
   const nav = me?.role === "owner" ? OWNER_NAV : me?.role === "driver" ? DRIVER_NAV : STAFF_NAV;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/[0.07] via-background to-muted/50 pb-24 md:pb-8">
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#101d3b]/95 text-white shadow-[0_8px_30px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
+    <div className="min-h-screen bg-[#f4f7fb] pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-slate-900 md:pb-8">
+      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 text-slate-900 shadow-[0_4px_24px_rgba(15,23,42,0.06)] backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-white/25 to-white/[0.06] text-white ring-1 ring-white/20 shadow-inner">
-            <Wallet className="h-5 w-5" />
-            <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-[#101d3b]" />
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-50 ring-1 ring-slate-200">
+            <img src="/icons/sai-sindhu-logo.svg" alt="Sai Sindhu Enterprises" className="h-full w-full object-contain p-1" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-extrabold tracking-tight">{me?.name || "CreditBook"}</div>
-            <div className="mt-0.5 flex items-center gap-1.5 text-[10px] font-semibold tracking-wide text-white/55">
-              <span>Sai Sindhu Enterprises</span><span className="text-white/25">•</span><span className="capitalize">{me?.role ?? (isLoading ? "…" : "no access")}</span>
+            <div className="truncate text-sm font-extrabold tracking-tight text-slate-900">{me?.name || "CreditBook"}</div>
+            <div className="mt-0.5 flex items-center gap-1.5 text-[10px] font-semibold tracking-wide text-slate-500">
+              <span>Sai Sindhu Enterprises</span><span className="text-slate-300">•</span><span className="capitalize text-emerald-700">{me?.role ?? (isLoading ? "…" : "no access")}</span>
             </div>
           </div>
           {me?.role && (
-            <nav className="hidden items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.06] p-1 md:flex">
+            <nav className="hidden items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1 md:flex">
               {nav.map((n) => (
-                <Link key={n.to} to={n.to} className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-white/65 transition-all hover:bg-white/10 hover:text-white" activeProps={{ className: "bg-white text-[#142342] shadow-md" }}>
+                <Link key={n.to} to={n.to} className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-slate-600 transition-all hover:bg-white hover:text-slate-950 hover:shadow-sm" activeProps={{ className: "bg-[#142342] text-white shadow-sm" }}>
                   <n.icon className="h-3.5 w-3.5" />{n.label}
                 </Link>
               ))}
             </nav>
           )}
-          <button onClick={signOut} aria-label="Sign out" title="Sign out" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-white/75 transition hover:border-rose-300/30 hover:bg-rose-400/15 hover:text-white">
+          <button onClick={signOut} aria-label="Sign out" title="Sign out" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600">
             <LogOut className="h-[18px] w-[18px]" />
           </button>
         </div>
@@ -72,27 +71,27 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 md:py-8">
         {isLoading ? (
-          <div className="flex min-h-48 flex-col items-center justify-center gap-3 text-sm text-muted-foreground"><span className="h-8 w-8 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />Preparing your workspace…</div>
+          <div className="flex min-h-48 flex-col items-center justify-center gap-3 text-sm text-slate-500"><span className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-100 border-t-emerald-700" />Preparing your workspace…</div>
         ) : !me?.role ? (
-          <div className="mx-auto mt-10 max-w-lg rounded-3xl border border-border/70 bg-card p-7 text-center shadow-xl shadow-primary/[0.04]">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600"><Sparkles className="h-6 w-6" /></div>
-            <h2 className="font-extrabold tracking-tight">No access yet</h2>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Your account has no role yet. Ask the owner to add you as a driver or salesman.</p>
+          <div className="mx-auto mt-10 max-w-lg rounded-3xl border border-slate-200 bg-white p-7 text-center shadow-xl shadow-slate-900/[0.04]">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600"><Sparkles className="h-6 w-6" /></div>
+            <h2 className="font-extrabold tracking-tight text-slate-900">No access yet</h2>
+            <p className="mt-1 text-sm leading-relaxed text-slate-500">Your account has no role yet. Ask the owner to add you as a driver or salesman.</p>
           </div>
         ) : me.role !== "owner" && (OWNER_ONLY.some((p) => pathname.startsWith(p)) || (pathname === "/shops" && me.role !== "owner" && me.role !== "driver")) ? (
-          <div className="mx-auto mt-10 max-w-lg rounded-3xl border border-border/70 bg-card p-7 text-center text-sm text-muted-foreground shadow-lg">This page is for the owner only.</div>
+          <div className="mx-auto mt-10 max-w-lg rounded-3xl border border-slate-200 bg-white p-7 text-center text-sm text-slate-500 shadow-lg">This page is for the owner only.</div>
         ) : children}
       </main>
 
       {me?.role && (
-        <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-card/90 shadow-[0_-12px_40px_rgba(15,23,42,0.10)] backdrop-blur-2xl md:hidden">
-          <div className="mx-auto flex max-w-md px-2 pb-[env(safe-area-inset-bottom)] pt-1.5">
+        <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 shadow-[0_-8px_28px_rgba(15,23,42,0.08)] backdrop-blur-xl md:hidden">
+          <div className="mx-auto flex max-w-md px-2 pb-[max(0.45rem,env(safe-area-inset-bottom))] pt-2">
             {nav.map((n) => {
               const active = pathname === n.to || (n.to !== "/home" && pathname.startsWith(n.to));
               return (
-                <Link key={n.to} to={n.to} className={`relative flex flex-1 flex-col items-center gap-1 rounded-xl py-2 text-[10px] font-bold transition-all ${active ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
-                  {active && <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-primary" />}
-                  <span className={`flex h-8 w-10 items-center justify-center rounded-xl transition-all ${active ? "bg-primary/10" : ""}`}><n.icon className="h-[19px] w-[19px]" /></span>
+                <Link key={n.to} to={n.to} className={`relative flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[10px] font-bold transition-all ${active ? "text-emerald-800" : "text-slate-400 hover:text-slate-700"}`}>
+                  {active && <span className="absolute inset-x-4 -top-2 h-0.5 rounded-full bg-emerald-600" />}
+                  <span className={`flex h-8 w-10 items-center justify-center rounded-xl transition-all ${active ? "bg-emerald-50" : ""}`}><n.icon className="h-[19px] w-[19px]" /></span>
                   {n.label}
                 </Link>
               );
