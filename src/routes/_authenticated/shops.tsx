@@ -80,20 +80,27 @@ function ShopsPage() {
         </p>
       </div>
       {list.length === 0 ? <Empty>{q.trim() ? "No matching shop found. Check the name or mobile number." : "No shops yet. Add your first shop."}</Empty> : (
-        <Card className="divide-y divide-border/60 overflow-hidden">
+        <div className="grid gap-2 sm:grid-cols-2">
           {list.map((s) => (
-            <div key={s.id} className="flex items-center gap-2 p-3 transition-all hover:bg-primary/[0.035]">
-              <Link to="/shops/$id" params={{ id: s.id }} className="group flex min-w-0 flex-1 items-center justify-between gap-3 p-1">
-                <div className="min-w-0">
-                  <div className="truncate font-extrabold tracking-tight transition-colors group-hover:text-primary">{s.name}</div>
-                  <div className="truncate text-xs text-muted-foreground">{[s.contact_name, s.phone].filter(Boolean).join(" · ") || "—"}</div>
+            <Card key={s.id} className="group overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-lg hover:shadow-slate-900/[0.06]">
+              <div className="flex items-center gap-3 p-3.5 sm:p-4">
+                <Link to="/shops/$id" params={{ id: s.id }} className="flex min-w-0 flex-1 items-center gap-3">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#e8f5ef] to-[#dcebe7] text-sm font-extrabold uppercase text-emerald-900 ring-1 ring-emerald-900/5">{s.name.trim().slice(0, 1) || "S"}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-extrabold tracking-tight text-slate-900 transition-colors group-hover:text-emerald-800">{s.name}</span>
+                    <span className="mt-1 block truncate text-xs text-slate-500">{[s.contact_name, s.phone].filter(Boolean).join(" · ") || "No contact details"}</span>
+                  </span>
+                </Link>
+                <div className="shrink-0 text-right">
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Outstanding</div>
+                  <div className={`mt-0.5 tabular text-sm font-extrabold ${s.due > 0 ? "text-rose-700" : "text-emerald-700"}`}>{inr(s.due)}</div>
+                  {s.phone && <a href={`tel:${String(s.phone).replace(/[^\\d+]/g, "")}`} aria-label={`Call ${s.name}`} title="Call shop" className="mt-1 inline-flex h-7 items-center gap-1 rounded-lg border border-slate-200 px-2 text-[10px] font-bold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800"><Phone className="h-3 w-3" /> Call</a>}
                 </div>
-                <div className="shrink-0 text-right"><div className={`tabular font-bold ${s.due > 0 ? "text-destructive" : "text-success"}`}>{inr(s.due)}</div></div>
-              </Link>
-              {s.phone && <a href={`tel:${String(s.phone).replace(/[^\\d+]/g, "")}`} aria-label={`Call ${s.name}`} title="Call shop" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-primary transition hover:bg-primary/10"><Phone className="h-4 w-4" /></a>}
-            </div>
+              </div>
+              <div className={`h-1 w-full ${s.due > 0 ? "bg-gradient-to-r from-rose-300 to-rose-100" : "bg-gradient-to-r from-emerald-300 to-emerald-100"}`} />
+            </Card>
           ))}
-        </Card>
+        </div>
       )}
       <ShopDialog open={open} onOpenChange={setOpen} driverMode={me?.role === "driver"} />
       {me?.role === "owner" && <ShopImportDialog open={importOpen} onOpenChange={setImportOpen} />}
