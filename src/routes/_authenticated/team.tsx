@@ -104,7 +104,7 @@ function AddEmployee({ open, onOpenChange }: { open: boolean; onOpenChange: (o: 
           <div className="space-y-1.5"><Label>Full name</Label><Input required minLength={2} maxLength={80} value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></div>
           <div className="space-y-1.5"><Label>Login email</Label><Input type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
           <div className="space-y-1.5"><Label>Phone</Label><Input type="tel" maxLength={20} value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label>Password (min 8)</Label><Input type="text" required minLength={8} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label>Password (min 8)</Label><Input type="password" autoComplete="new-password" required minLength={8} maxLength={72} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></div>
           <Button type="submit" className="w-full" disabled={m.isPending}>{m.isPending ? "Creating…" : "Create account"}</Button>
         </form>
       </DialogContent>
