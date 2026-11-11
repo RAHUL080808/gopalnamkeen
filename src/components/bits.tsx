@@ -4,8 +4,8 @@ import { STATUS_LABEL } from "@/lib/format";
 
 export function PageTitle({ title, action }: { title: string; action?: ReactNode }) {
   return (
-    <div className="mb-5 flex items-center justify-between gap-3">
-      <h1 className="text-2xl font-extrabold tracking-[-0.04em] text-foreground sm:text-[1.85rem]">{title}</h1>
+    <div className="mb-6 flex items-center justify-between gap-3">
+      <h1 className="text-2xl font-extrabold tracking-[-0.045em] text-slate-950 sm:text-[1.9rem]">{title}</h1>
       {action}
     </div>
   );
@@ -15,10 +15,10 @@ export function StatusBadge({ status: s }: { status: string | null }) {
   const status = s ?? "unpaid";
   return (
     <span className={cn(
-      "inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide",
-      status === "paid" && "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-      status === "partial" && "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-      status === "unpaid" && "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300",
+      "inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em]",
+      status === "paid" && "border-emerald-200 bg-emerald-50 text-emerald-800",
+      status === "partial" && "border-amber-200 bg-amber-50 text-amber-800",
+      status === "unpaid" && "border-rose-200 bg-rose-50 text-rose-700",
     )}>
       {STATUS_LABEL[status] ?? status}
     </span>
@@ -27,22 +27,22 @@ export function StatusBadge({ status: s }: { status: string | null }) {
 
 export function Stat({ label, value, tone }: { label: string; value: string; tone?: "success" | "danger" | "primary" }) {
   return (
-    <div className="group min-w-0 rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card to-muted/45 p-4 shadow-sm shadow-black/[0.035] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/[0.05] sm:p-5">
-      <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</div>
+    <div className="group min-w-0 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_3px_16px_rgba(15,23,42,0.035)] transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-lg hover:shadow-slate-900/[0.06] sm:p-5">
+      <div className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-500">{label}</div>
       <div className={cn(
-        "tabular mt-2 break-words text-lg font-extrabold tracking-tight sm:text-xl",
-        tone === "success" && "text-emerald-600",
-        tone === "danger" && "text-rose-600",
-        tone === "primary" && "text-primary",
+        "tabular mt-2 break-words text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl",
+        tone === "success" && "text-emerald-700",
+        tone === "danger" && "text-rose-700",
+        tone === "primary" && "text-[#1d355b]",
       )}>{value}</div>
     </div>
   );
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("rounded-2xl border border-border/70 bg-card shadow-[0_4px_24px_rgba(15,23,42,0.035)] transition-shadow duration-200", className)}>{children}</div>;
+  return <div className={cn("rounded-2xl border border-slate-200/80 bg-white shadow-[0_3px_18px_rgba(15,23,42,0.045)] transition-shadow duration-200", className)}>{children}</div>;
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <div className="rounded-3xl border border-dashed border-border/80 bg-gradient-to-br from-card to-muted/40 p-9 text-center text-sm text-muted-foreground shadow-sm">{children}</div>;
+  return <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-9 text-center text-sm text-slate-500 shadow-sm">{children}</div>;
 }
