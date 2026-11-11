@@ -31,7 +31,11 @@ export const createEmployee = createServerFn({ method: "POST" })
     const { error: rErr } = await supabaseAdmin
       .from("user_roles")
       .insert({ user_id: created.user.id, role: data.role });
-    if (rErr) throw new Error(rErr.message);
+    if (rErr) {
+      // Avoid leaving an orphan login if the role could not be assigned.
+      await supabaseAdmin.auth.admin.deleteUser(created.user.id);
+      throw new Error(rErr.message);
+    }
     return { id: created.user.id };
   });
 
@@ -55,6 +59,16 @@ export const updateEmployee = createServerFn({ method: "POST" })
     });
     if (!isOwner) throw new Error("Only the owner can edit employees");
     if (data.user_id === context.userId) throw new Error("You cannot edit your own account here");
+
+    const { data: targetRoles, error: targetRoleError } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user_id);
+    if (targetRoleError) throw new Error("Could not verify the team member's role");
+    if (!targetRoles?.some((entry) => entry.role === "driver" || entry.role === "salesman") ||
+        targetRoles.some((entry) => entry.role === "owner")) {
+      throw new Error("Only an existing driver or salesman can be edited");
+    }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const attributes: { email?: string; password?: string; email_confirm?: boolean } = {};
@@ -89,6 +103,16 @@ export const deleteEmployee = createServerFn({ method: "POST" })
     });
     if (!isOwner) throw new Error("Only the owner can remove employees");
     if (data.user_id === context.userId) throw new Error("You cannot remove your own account");
+
+    const { data: targetRoles, error: targetRoleError } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user_id);
+    if (targetRoleError) throw new Error("Could not verify the team member's role");
+    if (!targetRoles?.some((entry) => entry.role === "driver" || entry.role === "salesman") ||
+        targetRoles.some((entry) => entry.role === "owner")) {
+      throw new Error("Only an existing driver or salesman can be removed");
+    }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error: roleError } = await supabaseAdmin
