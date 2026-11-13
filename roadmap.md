@@ -1,4 +1,6 @@
 # Shop Excel import
+# Payments page runtime error
+- [x] Fix state initialization order and verify signed-in Payments and adjustment search; add regression coverage and clear existing compilation errors.
 # Driver bill amount editing
 - [ ] Add database-enforced amount-only driver edits and immutable owner-readable audit history.
 - [ ] Add driver editing and owner history to existing bill screens.
