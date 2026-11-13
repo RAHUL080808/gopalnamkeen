@@ -357,6 +357,16 @@ export type Database = {
       is_staff: { Args: { _user_id: string }; Returns: boolean }
       owner_exists: { Args: never; Returns: boolean }
       recalc_bill: { Args: { _bill_id: string }; Returns: undefined }
+      owner_transfer_bill_payment: {
+        Args: {
+          _amount: number
+          _payment_id: string
+          _reason?: string | null
+          _source_bill_id: string
+          _target_bill_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "owner" | "driver" | "salesman"
