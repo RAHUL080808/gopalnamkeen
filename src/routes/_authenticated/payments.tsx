@@ -40,7 +40,6 @@ function PaymentsPage() {
 
 function AllPayments() {
   const { data: me } = useMe();
-  const { data: me } = useMe();
   const [dateEdit, setDateEdit] = useState<null | { id: string; paid_at: string }>(null);
   const { data = [] } = useQuery({
     queryKey: ["all-payments"],
