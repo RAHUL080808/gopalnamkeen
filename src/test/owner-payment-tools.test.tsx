@@ -59,12 +59,12 @@ describe("Owner payment tools initialization", () => {
 describe("Independent payment workflows", () => {
   it("adjusts ₹600 only after confirmation, using the original allocation mutation", async () => {
     renderTools();
-    fireEvent.click(screen.getByRole("button", { name: "Adjust Payment", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Adjust Payment" }));
     const dialog = screen.getByRole("dialog");
     fireEvent.change(within(dialog).getByRole("combobox", { name: "Select Payment" }), { target: { value: "payment-1" } });
     fireEvent.change(within(dialog).getByRole("combobox", { name: "Select Bill" }), { target: { value: "bill-a" } });
     fireEvent.change(within(dialog).getByLabelText("3. Enter Amount (₹)"), { target: { value: "600" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Adjust Payment", exact: true }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Adjust Payment" }));
     expect(calls.from).not.toHaveBeenCalled();
     expect(calls.rpc).not.toHaveBeenCalled();
     fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Haan, confirm karein" }));
@@ -75,12 +75,12 @@ describe("Independent payment workflows", () => {
 
   it("transfers ₹400 only through the existing RPC after confirmation", async () => {
     renderTools();
-    fireEvent.click(screen.getByRole("button", { name: "Transfer Payment", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Transfer Payment" }));
     const dialog = screen.getByRole("dialog");
     fireEvent.change(within(dialog).getByRole("combobox", { name: "Select Payment" }), { target: { value: "payment-2" } });
     fireEvent.change(within(dialog).getByRole("combobox", { name: "Select To Bill" }), { target: { value: "bill-b" } });
     fireEvent.change(within(dialog).getByLabelText("4. Enter Amount (₹)"), { target: { value: "400" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Transfer Payment", exact: true }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Transfer Payment" }));
     expect(calls.rpc).not.toHaveBeenCalled();
     fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Haan, confirm karein" }));
     await waitFor(() => expect(calls.rpc).toHaveBeenCalledExactlyOnceWith("owner_transfer_bill_payment", {
@@ -92,12 +92,12 @@ describe("Independent payment workflows", () => {
 
   it("cancelling a confirmation sends no payment mutations", () => {
     renderTools();
-    fireEvent.click(screen.getByRole("button", { name: "Adjust Payment", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Adjust Payment" }));
     const dialog = screen.getByRole("dialog");
     fireEvent.change(within(dialog).getByRole("combobox", { name: "Select Payment" }), { target: { value: "payment-1" } });
     fireEvent.change(within(dialog).getByRole("combobox", { name: "Select Bill" }), { target: { value: "bill-a" } });
     fireEvent.change(within(dialog).getByLabelText("3. Enter Amount (₹)"), { target: { value: "600" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Adjust Payment", exact: true }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Adjust Payment" }));
     fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Cancel" }));
     expect(calls.from).not.toHaveBeenCalled();
     expect(calls.rpc).not.toHaveBeenCalled();
@@ -105,17 +105,17 @@ describe("Independent payment workflows", () => {
 
   it("retains adjustment selections separately when the transfer form is used", () => {
     renderTools();
-    fireEvent.click(screen.getByRole("button", { name: "Adjust Payment", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Adjust Payment" }));
     let dialog = screen.getByRole("dialog");
     fireEvent.change(within(dialog).getByRole("combobox", { name: "Select Payment" }), { target: { value: "payment-1" } });
     fireEvent.change(within(dialog).getByRole("combobox", { name: "Select Bill" }), { target: { value: "bill-a" } });
     fireEvent.change(within(dialog).getByLabelText("3. Enter Amount (₹)"), { target: { value: "600" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
-    fireEvent.click(screen.getByRole("button", { name: "Transfer Payment", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Transfer Payment" }));
     dialog = screen.getByRole("dialog");
     fireEvent.change(within(dialog).getByRole("combobox", { name: "Select Payment" }), { target: { value: "payment-2" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
-    fireEvent.click(screen.getByRole("button", { name: "Adjust Payment", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Adjust Payment" }));
     dialog = screen.getByRole("dialog");
     expect(within(dialog).getByRole("combobox", { name: "Select Payment" })).toHaveValue("payment-1");
     expect(within(dialog).getByRole("combobox", { name: "Select Bill" })).toHaveValue("bill-a");
