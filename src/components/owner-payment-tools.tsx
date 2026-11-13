@@ -186,7 +186,7 @@ export function OwnerPaymentTools() {
   return (
     <div className="flex flex-wrap gap-2">
       <Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Add payment</Button>
-      <Button variant="outline" onClick={() => setAllocateOpen(true)}><ArrowRightLeft className="h-4 w-4" /> Adjust Payment</Button>
+      <Button variant="outline" onClick={() => setAllocateOpen(true)}><ArrowRightLeft className="h-4 w-4" /> Adjust / Transfer Payment</Button>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
@@ -253,7 +253,7 @@ export function OwnerPaymentTools() {
       {receipt && <WhatsAppReceiptDialog open={!!receipt} onOpenChange={open => !open && setReceipt(null)} {...receipt} />}
       <Dialog open={allocateOpen} onOpenChange={setAllocateOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Adjust Payment</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Adjust / Transfer Payment</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5"><Label>Payment to adjust / transfer</Label>
               <Select value={allocPayment} onValueChange={v => { setAllocPayment(v); setAllocBill(""); setAllocAmount(""); setTransferSourceBillId(""); setTransferTargetBillId(""); setTransferAmount(""); }}>
