@@ -1,6 +1,6 @@
-# Gopalnamkeen
+# Sai Sindhu Enterprises
 
-Build a mobile-first FMCG Credit and Payment Management Web App.
+A mobile-first business billing, collections and payment management web app.
 
 
 
