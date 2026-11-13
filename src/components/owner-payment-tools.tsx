@@ -22,6 +22,7 @@ export function OwnerPaymentTools() {
   const [allocateOpen, setAllocateOpen] = useState(false);
   const [shopId, setShopId] = useState("");
   const [shopSearch, setShopSearch] = useState("");
+  const [shopDropdownOpen, setShopDropdownOpen] = useState(false);
   const [billId, setBillId] = useState("advance");
   const [amount, setAmount] = useState("");
   const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 16));
@@ -158,24 +159,41 @@ export function OwnerPaymentTools() {
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Record shop payment</DialogTitle></DialogHeader>
           <form className="space-y-3" onSubmit={e => { e.preventDefault(); addPayment.mutate(); }}>
-            <div className="space-y-1.5"><Label>Shop</Label>
+            <div className="relative space-y-1.5"><Label>Shop</Label>
               <Input
-                list="owner-payment-shop-options"
                 value={shopSearch}
+                onFocus={() => setShopDropdownOpen(true)}
                 onChange={e => {
                   const value = e.target.value;
                   setShopSearch(value);
-                  const match = shops.find(s => s.name.toLowerCase() === value.trim().toLowerCase());
-                  setShopId(match?.id ?? "");
+                  setShopId("");
                   setBillId("advance");
+                  setShopDropdownOpen(true);
                 }}
+                onKeyDown={e => { if (e.key === "Escape") setShopDropdownOpen(false); }}
                 placeholder="Search or select shop…"
                 autoComplete="off"
               />
-              <datalist id="owner-payment-shop-options">
-                {filteredShops.map(s => <option key={s.id} value={s.name} />)}
-              </datalist>
-              {shopSearch.trim() && !shopId && <p className="text-xs text-muted-foreground">List se shop select karein.</p>}
+              {shopDropdownOpen && (
+                <div className="absolute z-50 mt-1 max-h-52 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                  {(shopId ? shops : filteredShops).length > 0 ? (shopId ? shops : filteredShops).map(s => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className="w-full rounded-sm px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => {
+                        setShopId(s.id);
+                        setShopSearch(s.name);
+                        setBillId("advance");
+                        setShopDropdownOpen(false);
+                      }}
+                    >
+                      {s.name}
+                    </button>
+                  )) : <p className="px-3 py-2 text-sm text-muted-foreground">No matching shop found</p>}
+                </div>
+              )}
             </div>
             <div className="space-y-1.5"><Label>Payment for</Label>
               <Select value={billId} onValueChange={setBillId}>
