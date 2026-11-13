@@ -105,12 +105,18 @@ export function OwnerPaymentTools() {
   const allocated = chosenPayment?.payment_allocations.reduce((s, x) => s + Number(x.amount), 0) ?? 0;
   const unallocated = chosenPayment && !chosenPayment.bill_id ? Number(chosenPayment.amount) - allocated : 0;
   const shopBills = chosenPayment ? bills.filter(b => b.shop_id === chosenPayment.shop_id) : [];
+  const filteredPaymentsToAdjust = useMemo(() => paymentsToAdjust.filter(a => `${a.shops?.name ?? ""} ${a.bills?.bill_number ?? ""} ${a.amount} ${a.reference ?? ""}`.toLowerCase().includes(paymentSearch.trim().toLowerCase())), [paymentsToAdjust, paymentSearch]);
+  const sourceAllocations = chosenPayment?.payment_allocations.filter(a => `${a.bills?.bill_number ?? ""} ${a.amount}`.toLowerCase().includes(sourceBillSearch.trim().toLowerCase())) ?? [];
+  const filteredTargetBills = shopBills.filter(b => b.id !== (transferSourceBillId || chosenPayment?.bill_id) && Number(b.balance) > 0 && `${b.bill_number} ${b.balance}`.toLowerCase().includes(targetBillSearch.trim().toLowerCase()));
   const [editingAllocation, setEditingAllocation] = useState<string | null>(null);
   const [editBillId, setEditBillId] = useState("");
   const [editAmount, setEditAmount] = useState("");
   const [transferSourceBillId, setTransferSourceBillId] = useState("");
   const [transferTargetBillId, setTransferTargetBillId] = useState("");
   const [transferAmount, setTransferAmount] = useState("");
+  const [paymentSearch, setPaymentSearch] = useState("");
+  const [sourceBillSearch, setSourceBillSearch] = useState("");
+  const [targetBillSearch, setTargetBillSearch] = useState("");
 
   const allocate = useMutation({
     mutationFn: async () => {
@@ -256,13 +262,14 @@ export function OwnerPaymentTools() {
           <DialogHeader><DialogTitle>Adjust / Transfer Payment</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5"><Label>Payment to adjust / transfer</Label>
+              <Input value={paymentSearch} onChange={e => setPaymentSearch(e.target.value)} placeholder="Type shop name, bill number or amount to search…" />
               <Select value={allocPayment} onValueChange={v => { setAllocPayment(v); setAllocBill(""); setAllocAmount(""); setTransferSourceBillId(""); setTransferTargetBillId(""); setTransferAmount(""); }}>
                 <SelectTrigger><SelectValue placeholder="Choose payment" /></SelectTrigger>
-                <SelectContent>{paymentsToAdjust.map(a => {
+                <SelectContent>{filteredPaymentsToAdjust.map(a => {
                   const assigned = a.bill_id ? Number(a.amount) : a.payment_allocations.reduce((s,x) => s + Number(x.amount),0);
                   const label = a.bill_id ? `Bill ${a.bills?.bill_number ?? ""}` : assigned > 0 ? "Allocated payment" : "Unallocated advance";
                   return <SelectItem key={a.id} value={a.id}>{a.shops?.name ?? "Shop"} · {label} · {inr(a.amount)} · {fmtDateTime(a.paid_at)}</SelectItem>;
-                })}</SelectContent>
+                })}{filteredPaymentsToAdjust.length === 0 && <div className="px-2 py-3 text-sm text-muted-foreground">No matching payment found</div>}</SelectContent>
               </Select>
             </div>
             {chosenPayment && <>
@@ -270,19 +277,21 @@ export function OwnerPaymentTools() {
               {(chosenPayment.bill_id || chosenPayment.payment_allocations.length > 0) && <div className="space-y-2 rounded-lg border p-3">
                 <Label>Transfer payment to another bill</Label>
                 <div className="space-y-1.5"><Label>From bill</Label>
+                  <Input value={sourceBillSearch} onChange={e => setSourceBillSearch(e.target.value)} placeholder="Search source bill number…" />
                   <Select value={transferSourceBillId || (chosenPayment.bill_id ?? "")} onValueChange={setTransferSourceBillId}>
                     <SelectTrigger><SelectValue placeholder="Choose source bill" /></SelectTrigger>
                     <SelectContent>
                       {chosenPayment.bill_id
                         ? <SelectItem value={chosenPayment.bill_id}>{chosenPayment.bills?.bill_number ?? "Current bill"} · {inr(chosenPayment.amount)}</SelectItem>
-                        : chosenPayment.payment_allocations.map(a => <SelectItem key={a.bill_id} value={a.bill_id}>{a.bills?.bill_number ?? "Bill"} · {inr(a.amount)}</SelectItem>)}
+                        : sourceAllocations.map(a => <SelectItem key={a.bill_id} value={a.bill_id}>{a.bills?.bill_number ?? "Bill"} · {inr(a.amount)}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5"><Label>To bill</Label>
+                  <Input value={targetBillSearch} onChange={e => setTargetBillSearch(e.target.value)} placeholder="Search target bill number…" />
                   <Select value={transferTargetBillId} onValueChange={setTransferTargetBillId}>
                     <SelectTrigger><SelectValue placeholder="Choose target bill" /></SelectTrigger>
-                    <SelectContent>{shopBills.filter(b => b.id !== (transferSourceBillId || chosenPayment.bill_id) && Number(b.balance) > 0).map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}</SelectContent>
+                    <SelectContent>{filteredTargetBills.map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}{filteredTargetBills.length === 0 && <div className="px-2 py-3 text-sm text-muted-foreground">No matching bill found</div>}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5"><Label>Amount to transfer (₹)</Label>
