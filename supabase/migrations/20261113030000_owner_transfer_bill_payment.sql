@@ -2,9 +2,9 @@
 -- for the same shop. The payment record and amount remain unchanged.
 CREATE TABLE IF NOT EXISTS public.payment_allocation_transfer_history (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  payment_id uuid NOT NULL REFERENCES public.payments(id) ON DELETE RESTRICT,
-  source_bill_id uuid NOT NULL REFERENCES public.bills(id) ON DELETE RESTRICT,
-  target_bill_id uuid NOT NULL REFERENCES public.bills(id) ON DELETE RESTRICT,
+  payment_id uuid REFERENCES public.payments(id) ON DELETE SET NULL,
+  source_bill_id uuid REFERENCES public.bills(id) ON DELETE SET NULL,
+  target_bill_id uuid REFERENCES public.bills(id) ON DELETE SET NULL,
   amount numeric(12,2) NOT NULL CHECK (amount > 0),
   reason text,
   transferred_by uuid NOT NULL REFERENCES auth.users(id),
@@ -85,6 +85,9 @@ BEGIN
     -- Convert the direct bill payment into allocations so its original payment
     -- record, date, mode, collector and reference are preserved.
     UPDATE public.payments SET bill_id = NULL WHERE id = _payment_id;
+    -- Restore the source bill's available balance before inserting its
+    -- remaining allocation; allocation validation may check bill balance.
+    PERFORM public.recalc_bill(_source_bill_id);
     v_remaining := v_payment.amount - _amount;
 
     IF v_remaining > 0 THEN
