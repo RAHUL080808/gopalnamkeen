@@ -79,7 +79,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <h2 className="font-extrabold tracking-tight text-slate-900">No access yet</h2>
             <p className="mt-1 text-sm leading-relaxed text-slate-500">Your account has no role yet. Ask the owner to add you as a driver or salesman.</p>
           </div>
-        ) : me.role !== "owner" && (OWNER_ONLY.some((p) => pathname.startsWith(p)) || (pathname === "/shops" && me.role !== "owner" && me.role !== "driver")) ? (
+        ) : me.role !== "owner" && (OWNER_ONLY.some((p) => pathname.startsWith(p)) || (pathname === "/shops" && me.role !== "driver")) ? (
           <div className="mx-auto mt-10 max-w-lg rounded-3xl border border-slate-200 bg-white p-7 text-center text-sm text-slate-500 shadow-lg">This page is for the owner only.</div>
         ) : children}
       </main>

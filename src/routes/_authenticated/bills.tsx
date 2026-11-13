@@ -37,6 +37,7 @@ function BillsPage() {
   const todayUtc = new Date();
   const ageInDays = (date: string) => {
     const [y, m, d] = date.split("-").map(Number);
+    if (y === undefined || m === undefined || d === undefined) return NaN;
     return Math.floor((Date.UTC(todayUtc.getFullYear(), todayUtc.getMonth(), todayUtc.getDate()) - Date.UTC(y, m - 1, d)) / 86400000);
   };
   const list = [...(filter === "all" ? bills : filter === "overdue" ? bills.filter((b) => Number(b.balance) > 0 && ageInDays(b.bill_date) >= 7) : bills.filter((b) => b.status === filter))]

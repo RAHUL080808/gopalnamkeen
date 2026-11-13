@@ -101,13 +101,6 @@ export function OwnerPaymentTools() {
   const [allocPayment, setAllocPayment] = useState("");
   const [allocBill, setAllocBill] = useState("");
   const [allocAmount, setAllocAmount] = useState("");
-  const chosenPayment = paymentsToAdjust.find(a => a.id === allocPayment);
-  const allocated = chosenPayment?.payment_allocations.reduce((s, x) => s + Number(x.amount), 0) ?? 0;
-  const unallocated = chosenPayment && !chosenPayment.bill_id ? Number(chosenPayment.amount) - allocated : 0;
-  const shopBills = chosenPayment ? bills.filter(b => b.shop_id === chosenPayment.shop_id) : [];
-  const filteredPaymentsToAdjust = useMemo(() => paymentsToAdjust.filter(a => `${a.shops?.name ?? ""} ${a.bills?.bill_number ?? ""} ${a.amount} ${a.reference ?? ""}`.toLowerCase().includes(paymentSearch.trim().toLowerCase())), [paymentsToAdjust, paymentSearch]);
-  const sourceAllocations = chosenPayment?.payment_allocations.filter(a => `${a.bills?.bill_number ?? ""} ${a.amount}`.toLowerCase().includes(sourceBillSearch.trim().toLowerCase())) ?? [];
-  const filteredTargetBills = shopBills.filter(b => b.id !== (transferSourceBillId || chosenPayment?.bill_id) && Number(b.balance) > 0 && `${b.bill_number} ${b.balance}`.toLowerCase().includes(targetBillSearch.trim().toLowerCase()));
   const [editingAllocation, setEditingAllocation] = useState<string | null>(null);
   const [editBillId, setEditBillId] = useState("");
   const [editAmount, setEditAmount] = useState("");
@@ -117,6 +110,13 @@ export function OwnerPaymentTools() {
   const [paymentSearch, setPaymentSearch] = useState("");
   const [sourceBillSearch, setSourceBillSearch] = useState("");
   const [targetBillSearch, setTargetBillSearch] = useState("");
+  const chosenPayment = paymentsToAdjust.find(a => a.id === allocPayment);
+  const allocated = chosenPayment?.payment_allocations.reduce((s, x) => s + Number(x.amount), 0) ?? 0;
+  const unallocated = chosenPayment && !chosenPayment.bill_id ? Number(chosenPayment.amount) - allocated : 0;
+  const shopBills = chosenPayment ? bills.filter(b => b.shop_id === chosenPayment.shop_id) : [];
+  const filteredPaymentsToAdjust = useMemo(() => paymentsToAdjust.filter(a => `${a.shops?.name ?? ""} ${a.bills?.bill_number ?? ""} ${a.amount} ${a.reference ?? ""}`.toLowerCase().includes(paymentSearch.trim().toLowerCase())), [paymentsToAdjust, paymentSearch]);
+  const sourceAllocations = chosenPayment?.payment_allocations.filter(a => `${a.bills?.bill_number ?? ""} ${a.amount}`.toLowerCase().includes(sourceBillSearch.trim().toLowerCase())) ?? [];
+  const filteredTargetBills = shopBills.filter(b => b.id !== (transferSourceBillId || chosenPayment?.bill_id) && Number(b.balance) > 0 && `${b.bill_number} ${b.balance}`.toLowerCase().includes(targetBillSearch.trim().toLowerCase()));
 
   const allocate = useMutation({
     mutationFn: async () => {
