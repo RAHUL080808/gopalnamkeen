@@ -2,7 +2,7 @@
 -- Keep an immutable audit trail for every change.
 CREATE TABLE IF NOT EXISTS public.payment_date_edit_history (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  payment_id uuid NOT NULL REFERENCES public.payments(id) ON DELETE RESTRICT,
+  payment_id uuid REFERENCES public.payments(id) ON DELETE SET NULL,
   old_paid_at timestamptz NOT NULL,
   new_paid_at timestamptz NOT NULL,
   edited_by uuid NOT NULL REFERENCES auth.users(id),
