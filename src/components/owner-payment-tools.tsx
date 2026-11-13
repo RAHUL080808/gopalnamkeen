@@ -1,25 +1,47 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, ArrowRightLeft } from "lucide-react";
+import { Plus, ArrowRightLeft, Check, ArrowRight, Pencil, Trash2, ShieldCheck, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { inr, fmtDateTime, MODES, type PaymentMode } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WhatsAppReceiptDialog } from "@/components/whatsapp-receipt-dialog";
+import { PaymentToolPicker, type PaymentToolOption } from "@/components/payment-tool-picker";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 type Shop = { id: string; name: string; phone: string | null };
 type Bill = { id: string; bill_number: string; amount: number; balance: number; shop_id: string };
-type Advance = { id: string; shop_id: string; bill_id: string | null; amount: number; paid_at: string; remarks: string | null; reference: string | null; shops: { name: string } | null; bills: { bill_number: string } | null; payment_allocations: { id: string; amount: number; bill_id: string; bills: { bill_number: string } | null }[] };
+type ToolPayment = { id: string; shop_id: string; bill_id: string | null; amount: number; paid_at: string; remarks: string | null; reference: string | null; shops: { name: string } | null; bills: { bill_number: string } | null; payment_allocations: { id: string; amount: number; bill_id: string; bills: { bill_number: string } | null }[] };
+type Feedback = { error: boolean; message: string } | null;
+type Confirmation = { kind: "allocate" | "transfer" | "update" | "remove"; title: string; description: string; id?: string } | null;
+
+function paymentOptions(payments: ToolPayment[]): PaymentToolOption[] {
+  return payments.map(payment => ({
+    value: payment.id,
+    label: payment.shops?.name ?? "Shop",
+    detail: `${inr(payment.amount)} · ${payment.bill_id ? payment.bills?.bill_number ?? "Bill payment" : "Without Bill Payment"} · ${fmtDateTime(payment.paid_at)}`,
+    searchText: `${payment.reference ?? ""} ${payment.payment_allocations.map(a => a.bills?.bill_number ?? "").join(" ")}`,
+  }));
+}
+
+function ToolFeedback({ feedback }: { feedback: Feedback }) {
+  if (!feedback) return null;
+  return <p role={feedback.error ? "alert" : "status"} className={`rounded-md border p-3 text-sm ${feedback.error ? "border-destructive/30 bg-destructive/5 text-destructive" : "border-success/30 bg-accent text-accent-foreground"}`}>{feedback.message}</p>;
+}
 
 export function OwnerPaymentTools() {
   const qc = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
   const [allocateOpen, setAllocateOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState<Confirmation>(null);
+  const [adjustFeedback, setAdjustFeedback] = useState<Feedback>(null);
+  const [transferFeedback, setTransferFeedback] = useState<Feedback>(null);
   const [shopId, setShopId] = useState("");
   const [shopSearch, setShopSearch] = useState("");
   const [shopDropdownOpen, setShopDropdownOpen] = useState(false);
@@ -40,7 +62,7 @@ export function OwnerPaymentTools() {
       return (data ?? []) as Shop[];
     },
   });
-  const { data: bills = [] } = useQuery({
+  const { data: bills = [], isPending: billsLoading, error: billsError } = useQuery({
     queryKey: ["owner-payment-bills"],
     queryFn: async () => {
       const { data, error } = await supabase.from("bills").select("id,bill_number,amount,balance,shop_id").order("bill_date", { ascending: true });
@@ -48,14 +70,14 @@ export function OwnerPaymentTools() {
       return (data ?? []) as Bill[];
     },
   });
-  const { data: paymentsToAdjust = [] } = useQuery({
+  const { data: paymentsToAdjust = [], isPending: paymentsLoading, error: paymentsError } = useQuery({
     queryKey: ["owner-paymentsToAdjust"],
     queryFn: async () => {
       const { data, error } = await (supabase.from("payments") as any)
         .select("id,shop_id,bill_id,amount,paid_at,remarks,reference,shops(name),bills(bill_number),payment_allocations(id,amount,bill_id,bills(bill_number))")
         .eq("is_void", false).order("paid_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as Advance[];
+      return (data ?? []) as ToolPayment[];
     },
   });
   const selectedShopBills = useMemo(() => bills.filter(b => b.shop_id === shopId && Number(b.balance) > 0), [bills, shopId]);
@@ -104,19 +126,27 @@ export function OwnerPaymentTools() {
   const [editingAllocation, setEditingAllocation] = useState<string | null>(null);
   const [editBillId, setEditBillId] = useState("");
   const [editAmount, setEditAmount] = useState("");
+  const [transferPaymentId, setTransferPaymentId] = useState("");
   const [transferSourceBillId, setTransferSourceBillId] = useState("");
   const [transferTargetBillId, setTransferTargetBillId] = useState("");
   const [transferAmount, setTransferAmount] = useState("");
-  const [paymentSearch, setPaymentSearch] = useState("");
-  const [sourceBillSearch, setSourceBillSearch] = useState("");
-  const [targetBillSearch, setTargetBillSearch] = useState("");
   const chosenPayment = paymentsToAdjust.find(a => a.id === allocPayment);
   const allocated = chosenPayment?.payment_allocations.reduce((s, x) => s + Number(x.amount), 0) ?? 0;
   const unallocated = chosenPayment && !chosenPayment.bill_id ? Number(chosenPayment.amount) - allocated : 0;
   const shopBills = chosenPayment ? bills.filter(b => b.shop_id === chosenPayment.shop_id) : [];
-  const filteredPaymentsToAdjust = useMemo(() => paymentsToAdjust.filter(a => `${a.shops?.name ?? ""} ${a.bills?.bill_number ?? ""} ${a.amount} ${a.reference ?? ""}`.toLowerCase().includes(paymentSearch.trim().toLowerCase())), [paymentsToAdjust, paymentSearch]);
-  const sourceAllocations = chosenPayment?.payment_allocations.filter(a => `${a.bills?.bill_number ?? ""} ${a.amount}`.toLowerCase().includes(sourceBillSearch.trim().toLowerCase())) ?? [];
-  const filteredTargetBills = shopBills.filter(b => b.id !== (transferSourceBillId || chosenPayment?.bill_id) && Number(b.balance) > 0 && `${b.bill_number} ${b.balance}`.toLowerCase().includes(targetBillSearch.trim().toLowerCase()));
+  const transferChosenPayment = paymentsToAdjust.find(a => a.id === transferPaymentId);
+  const transferShopBills = transferChosenPayment ? bills.filter(b => b.shop_id === transferChosenPayment.shop_id) : [];
+  const transferSourceId = transferSourceBillId || transferChosenPayment?.bill_id || "";
+  const sourceAmount = transferChosenPayment?.bill_id === transferSourceId
+    ? Number(transferChosenPayment?.amount ?? 0)
+    : Number(transferChosenPayment?.payment_allocations.find(a => a.bill_id === transferSourceId)?.amount ?? 0);
+  const targetBills = transferShopBills.filter(b => b.id !== transferSourceId && Number(b.balance) > 0);
+  const sourceOptions: PaymentToolOption[] = transferChosenPayment?.bill_id
+    ? [{ value: transferChosenPayment.bill_id, label: transferChosenPayment.bills?.bill_number ?? "Current bill", detail: `Paid ${inr(transferChosenPayment.amount)}` }]
+    : (transferChosenPayment?.payment_allocations ?? []).map(a => ({ value: a.bill_id, label: a.bills?.bill_number ?? "Bill", detail: `Paid ${inr(a.amount)}` }));
+  const billOptions = (list: Bill[]): PaymentToolOption[] => list.map(b => ({ value: b.id, label: b.bill_number, detail: `Baaki ${inr(b.balance)}` }));
+  const loading = billsLoading || paymentsLoading;
+  const loadError = billsError || paymentsError;
 
   const allocate = useMutation({
     mutationFn: async () => {
@@ -128,8 +158,8 @@ export function OwnerPaymentTools() {
       const { error } = await (supabase.from("payment_allocations") as any).insert({ payment_id: allocPayment, bill_id: allocBill, amount: value });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Payment adjusted"); setAllocAmount(""); setAllocBill(""); qc.invalidateQueries(); },
-    onError: e => toast.error((e as Error).message),
+    onSuccess: () => { toast.success("Payment adjusted"); setAdjustFeedback({ error: false, message: "Payment adjust ho gaya. Total collection nahi badla." }); setAllocAmount(""); setAllocBill(""); qc.invalidateQueries(); },
+    onError: e => { toast.error((e as Error).message); setAdjustFeedback({ error: true, message: (e as Error).message }); },
   });
 
   const updateAllocation = useMutation({
@@ -146,25 +176,25 @@ export function OwnerPaymentTools() {
         .update({ bill_id: editBillId, amount: value }).eq("id", editingAllocation);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Allocation updated"); setEditingAllocation(null); setEditBillId(""); setEditAmount(""); qc.invalidateQueries(); },
-    onError: e => toast.error((e as Error).message),
+    onSuccess: () => { toast.success("Allocation updated"); setAdjustFeedback({ error: false, message: "Adjustment update ho gaya. Payment record nahi badla." }); setEditingAllocation(null); setEditBillId(""); setEditAmount(""); qc.invalidateQueries(); },
+    onError: e => { toast.error((e as Error).message); setAdjustFeedback({ error: true, message: (e as Error).message }); },
   });
 
   const transferPayment = useMutation({
     mutationFn: async () => {
       const value = Number(transferAmount);
-      const sourceId = transferSourceBillId || chosenPayment?.bill_id || "";
-      if (!chosenPayment || !sourceId || !transferTargetBillId || !(value > 0)) {
+      const sourceId = transferSourceBillId || transferChosenPayment?.bill_id || "";
+      if (!transferChosenPayment || !sourceId || !transferTargetBillId || !(value > 0)) {
         throw new Error("Choose source bill, target bill and a valid amount");
       }
-      const sourceAmount = chosenPayment.bill_id === sourceId
-        ? Number(chosenPayment.amount)
-        : Number(chosenPayment.payment_allocations.find(a => a.bill_id === sourceId)?.amount ?? 0);
+      const sourceAmount = transferChosenPayment.bill_id === sourceId
+        ? Number(transferChosenPayment.amount)
+        : Number(transferChosenPayment.payment_allocations.find(a => a.bill_id === sourceId)?.amount ?? 0);
       if (value > sourceAmount) throw new Error("Transfer amount exceeds the source bill payment");
-      const target = shopBills.find(b => b.id === transferTargetBillId);
+      const target = transferShopBills.find(b => b.id === transferTargetBillId);
       if (!target || value > Number(target.balance)) throw new Error("Amount cannot exceed the target bill balance");
       const { error } = await (supabase.rpc as any)("owner_transfer_bill_payment", {
-        _payment_id: chosenPayment.id,
+        _payment_id: transferChosenPayment.id,
         _source_bill_id: sourceId,
         _target_bill_id: transferTargetBillId,
         _amount: value,
@@ -174,10 +204,11 @@ export function OwnerPaymentTools() {
     },
     onSuccess: () => {
       toast.success("Payment transferred; total collection is unchanged");
+      setTransferFeedback({ error: false, message: "Payment transfer ho gaya. Total collection nahi badla." });
       setTransferAmount(""); setTransferSourceBillId(""); setTransferTargetBillId("");
       qc.invalidateQueries();
     },
-    onError: e => toast.error((e as Error).message),
+    onError: e => { toast.error((e as Error).message); setTransferFeedback({ error: true, message: (e as Error).message }); },
   });
 
   const deleteAllocation = useMutation({
@@ -185,14 +216,32 @@ export function OwnerPaymentTools() {
       const { error } = await (supabase.from("payment_allocations") as any).delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Allocation removed; amount is available again"); setEditingAllocation(null); qc.invalidateQueries(); },
-    onError: e => toast.error((e as Error).message),
+    onSuccess: () => { toast.success("Allocation removed; amount is available again"); setAdjustFeedback({ error: false, message: "Adjustment hata diya. Yeh amount phir se available hai; payment record nahi badla." }); setEditingAllocation(null); qc.invalidateQueries(); },
+    onError: e => { toast.error((e as Error).message); setAdjustFeedback({ error: true, message: (e as Error).message }); },
   });
 
+  const adjustBusy = allocate.isPending || updateAllocation.isPending || deleteAllocation.isPending;
+  const busy = adjustBusy || transferPayment.isPending;
+
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="space-y-4">
       <Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Add payment</Button>
-      <Button variant="outline" onClick={() => setAllocateOpen(true)}><ArrowRightLeft className="h-4 w-4" /> Adjust / Transfer Payment</Button>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <section className="flex min-w-0 flex-col rounded-lg border border-border bg-card p-5">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-md bg-accent text-accent-foreground"><Check className="h-5 w-5" /></div>
+          <h2 className="text-base font-extrabold">ADJUST PAYMENT</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Payment ko kisi bill ke against adjust karein.</p>
+          <p className="mb-4 mt-3 border-l-2 border-success/40 pl-3 text-xs leading-relaxed text-muted-foreground">Example: ₹1,000 Without Bill Payment mein se ₹600 Bill A mein adjust karein. ₹400 baaki rahega.</p>
+          <Button variant="outline" className="mt-auto h-11 w-full border-success/30 text-accent-foreground hover:bg-accent" onClick={() => setAllocateOpen(true)}><Check /> Adjust Payment <ArrowRight className="ml-auto" /></Button>
+        </section>
+        <section className="flex min-w-0 flex-col rounded-lg border border-border bg-card p-5">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-md bg-secondary text-secondary-foreground"><ArrowRightLeft className="h-5 w-5" /></div>
+          <h2 className="text-base font-extrabold">TRANSFER PAYMENT</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Ek bill se payment doosre bill mein shift karein.</p>
+          <p className="mb-4 mt-3 border-l-2 border-primary/30 pl-3 text-xs leading-relaxed text-muted-foreground">Example: Bill A mein se ₹400 Bill B mein transfer karein. Total collection same rahega.</p>
+          <Button variant="outline" className="mt-auto h-11 w-full" onClick={() => setTransferOpen(true)}><ArrowRightLeft /> Transfer Payment <ArrowRight className="ml-auto" /></Button>
+        </section>
+      </div>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
@@ -216,10 +265,10 @@ export function OwnerPaymentTools() {
               {shopDropdownOpen && (
                 <div className="absolute z-50 mt-1 max-h-52 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                   {(shopId ? shops : filteredShops).length > 0 ? (shopId ? shops : filteredShops).map(s => (
-                    <button
+                    <Button variant="ghost"
                       key={s.id}
                       type="button"
-                      className="w-full rounded-sm px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                      className="h-auto w-full justify-start whitespace-normal rounded-sm px-3 py-2 text-left text-sm"
                       onMouseDown={e => e.preventDefault()}
                       onClick={() => {
                         setShopId(s.id);
@@ -229,7 +278,7 @@ export function OwnerPaymentTools() {
                       }}
                     >
                       {s.name}
-                    </button>
+                    </Button>
                   )) : <p className="px-3 py-2 text-sm text-muted-foreground">No matching shop found</p>}
                 </div>
               )}
@@ -257,78 +306,74 @@ export function OwnerPaymentTools() {
       </Dialog>
 
       {receipt && <WhatsAppReceiptDialog open={!!receipt} onOpenChange={open => !open && setReceipt(null)} {...receipt} />}
-      <Dialog open={allocateOpen} onOpenChange={setAllocateOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Adjust / Transfer Payment</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5"><Label>Payment to adjust / transfer</Label>
-              <Input value={paymentSearch} onChange={e => setPaymentSearch(e.target.value)} placeholder="Type shop name, bill number or amount to search…" />
-              <Select value={allocPayment} onValueChange={v => { setAllocPayment(v); setAllocBill(""); setAllocAmount(""); setTransferSourceBillId(""); setTransferTargetBillId(""); setTransferAmount(""); }}>
-                <SelectTrigger><SelectValue placeholder="Choose payment" /></SelectTrigger>
-                <SelectContent>{filteredPaymentsToAdjust.map(a => {
-                  const assigned = a.bill_id ? Number(a.amount) : a.payment_allocations.reduce((s,x) => s + Number(x.amount),0);
-                  const label = a.bill_id ? `Bill ${a.bills?.bill_number ?? ""}` : assigned > 0 ? "Allocated payment" : "Unallocated advance";
-                  return <SelectItem key={a.id} value={a.id}>{a.shops?.name ?? "Shop"} · {label} · {inr(a.amount)} · {fmtDateTime(a.paid_at)}</SelectItem>;
-                })}{filteredPaymentsToAdjust.length === 0 && <SelectItem value="__no_payment_match__" disabled>No matching payment found</SelectItem>}</SelectContent>
-              </Select>
+      <Dialog open={allocateOpen} onOpenChange={open => { if (!busy) setAllocateOpen(open); }}>
+        <DialogContent className="max-h-[90dvh] w-[calc(100%-1.5rem)] overflow-y-auto rounded-lg p-5 sm:p-6">
+          <DialogHeader className="text-left"><DialogTitle className="pr-6">Adjust Payment</DialogTitle><DialogDescription>Payment ko kisi bill ke against adjust karein.</DialogDescription></DialogHeader>
+          <ToolFeedback feedback={adjustFeedback} />
+          {loadError && <p role="alert" className="text-sm text-destructive">Payments load nahi hue. Page refresh karke phir try karein.</p>}
+          <form className="space-y-5" onSubmit={e => { e.preventDefault(); setConfirmation({ kind: "allocate", title: "Adjust Payment confirm karein?", description: `${chosenPayment?.shops?.name ?? "Shop"}: ${inr(Number(allocAmount))} ko ${shopBills.find(b => b.id === allocBill)?.bill_number ?? "bill"} mein adjust karein.` }); }}>
+            <div className="space-y-2"><Label htmlFor="adjust-payment">1. Select Payment</Label>
+              <PaymentToolPicker id="adjust-payment" label="Select Payment" value={allocPayment} onChange={v => { setAllocPayment(v); setAllocBill(""); setAllocAmount(""); setEditingAllocation(null); setEditBillId(""); setEditAmount(""); setAdjustFeedback(null); }} options={paymentOptions(paymentsToAdjust.filter(p => p.bill_id === null))} placeholder={loading ? "Loading payments…" : "Payment chunein"} searchPlaceholder="Shop ya amount search karein" disabled={loading || !!loadError || adjustBusy} emptyText="Koi Without Bill Payment nahi hai." />
+              {chosenPayment && <div className="flex flex-wrap items-center justify-between gap-2 border-l-2 border-success pl-3 text-sm"><span className="text-muted-foreground">Received {inr(chosenPayment.amount)} · Adjusted {inr(allocated)}</span><strong className="text-accent-foreground">Available {inr(unallocated)}</strong></div>}
             </div>
-            {chosenPayment && <>
-              <p className="rounded-lg bg-muted p-3 text-sm">Received {inr(chosenPayment.amount)} · Allocated {inr(chosenPayment.bill_id ? chosenPayment.amount : allocated)} · <b>Available {inr(chosenPayment.bill_id ? 0 : unallocated)}</b></p>
-              {(chosenPayment.bill_id || chosenPayment.payment_allocations.length > 0) && <div className="space-y-2 rounded-lg border p-3">
-                <Label>Transfer payment to another bill</Label>
-                <div className="space-y-1.5"><Label>From bill</Label>
-                  <Input value={sourceBillSearch} onChange={e => setSourceBillSearch(e.target.value)} placeholder="Search source bill number…" />
-                  <Select value={transferSourceBillId || (chosenPayment.bill_id ?? "")} onValueChange={setTransferSourceBillId}>
-                    <SelectTrigger><SelectValue placeholder="Choose source bill" /></SelectTrigger>
-                    <SelectContent>
-                      {chosenPayment.bill_id
-                        ? <SelectItem value={chosenPayment.bill_id}>{chosenPayment.bills?.bill_number ?? "Current bill"} · {inr(chosenPayment.amount)}</SelectItem>
-                        : sourceAllocations.map(a => <SelectItem key={a.bill_id} value={a.bill_id}>{a.bills?.bill_number ?? "Bill"} · {inr(a.amount)}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5"><Label>To bill</Label>
-                  <Input value={targetBillSearch} onChange={e => setTargetBillSearch(e.target.value)} placeholder="Search target bill number…" />
-                  <Select value={transferTargetBillId} onValueChange={setTransferTargetBillId}>
-                    <SelectTrigger><SelectValue placeholder="Choose target bill" /></SelectTrigger>
-                    <SelectContent>{filteredTargetBills.map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}{filteredTargetBills.length === 0 && <SelectItem value="__no_bill_match__" disabled>No matching bill found</SelectItem>}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5"><Label>Amount to transfer (₹)</Label>
-                  <Input type="number" min="0.01" step="0.01" value={transferAmount} onChange={e => setTransferAmount(e.target.value)} />
-                </div>
-                <Button type="button" className="w-full" disabled={transferPayment.isPending} onClick={() => {
-                  if (window.confirm("Transfer this amount to the selected bill? The payment entry and total collection will remain unchanged.")) transferPayment.mutate();
-                }}>{transferPayment.isPending ? "Transferring…" : "Transfer between bills"}</Button>
-              </div>}
-              {chosenPayment.payment_allocations.length > 0 && <div className="space-y-2 rounded-lg border p-3">
-                <Label>Existing bill allocations</Label>
-                {chosenPayment.payment_allocations.map(a => <div key={a.id} className="flex items-center justify-between gap-2 text-sm">
-                  <span>{a.bills?.bill_number ?? "Bill"} · {inr(a.amount)}</span>
-                  <div className="flex gap-1">
-                    <Button type="button" size="sm" variant="outline" onClick={() => { setEditingAllocation(a.id); setEditBillId(a.bill_id); setEditAmount(String(a.amount)); }}>Edit</Button>
-                    <Button type="button" size="sm" variant="destructive" disabled={deleteAllocation.isPending} onClick={() => { if (window.confirm("Remove this allocation? The payment will remain unchanged.")) deleteAllocation.mutate(a.id); }}>Remove</Button>
-                  </div>
-                </div>)}
-              </div>}
-              {editingAllocation && <div className="space-y-2 rounded-lg border p-3">
-                <Label>Edit allocation</Label>
-                <Select value={editBillId} onValueChange={setEditBillId}><SelectTrigger><SelectValue placeholder="Choose bill" /></SelectTrigger><SelectContent>{shopBills.map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}</SelectContent></Select>
-                <Input type="number" min="0.01" step="0.01" value={editAmount} onChange={e => setEditAmount(e.target.value)} />
-                <div className="flex gap-2"><Button type="button" className="flex-1" disabled={updateAllocation.isPending} onClick={() => updateAllocation.mutate()}>{updateAllocation.isPending ? "Saving…" : "Save adjustment"}</Button><Button type="button" variant="outline" onClick={() => setEditingAllocation(null)}>Cancel</Button></div>
-              </div>}
-              {!chosenPayment.bill_id && <>
-                <div className="space-y-1.5"><Label>Bill (same shop only)</Label>
-                  <Select value={allocBill} onValueChange={setAllocBill}><SelectTrigger><SelectValue placeholder="Choose bill" /></SelectTrigger><SelectContent>{shopBills.filter(b => Number(b.balance) > 0).map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}</SelectContent></Select>
-                </div>
-                <div className="space-y-1.5"><Label>Amount to allocate (₹)</Label><Input type="number" min="0.01" max={Math.min(unallocated, Number(shopBills.find(b=>b.id===allocBill)?.balance ?? 0))} step="0.01" value={allocAmount} onChange={e=>setAllocAmount(e.target.value)} /></div>
-                <Button className="w-full" disabled={allocate.isPending} onClick={() => allocate.mutate()}>{allocate.isPending ? "Allocating…" : "Adjust against bill"}</Button>
-              </>}
-            </>}
-            {paymentsToAdjust.length === 0 && <p className="text-sm text-muted-foreground">No payments available to adjust.</p>}
-          </div>
+            <div className="space-y-2"><Label htmlFor="adjust-bill">2. Select Bill</Label>
+              <PaymentToolPicker id="adjust-bill" label="Select Bill" value={allocBill} onChange={v => { setAllocBill(v); setAllocAmount(""); setAdjustFeedback(null); }} options={billOptions(shopBills.filter(b => Number(b.balance) > 0))} placeholder="Bill chunein" searchPlaceholder="Bill number search karein" disabled={!chosenPayment || loading || adjustBusy} emptyText="Is shop ka koi pending bill nahi hai." />
+            </div>
+            <div className="space-y-2"><Label htmlFor="adjust-amount">3. Enter Amount (₹)</Label><Input id="adjust-amount" type="number" inputMode="decimal" min="0.01" max={Math.min(unallocated, Number(shopBills.find(b => b.id === allocBill)?.balance ?? 0))} step="0.01" placeholder="0.00" required disabled={!allocBill || adjustBusy} value={allocAmount} onChange={e => { setAllocAmount(e.target.value); setAdjustFeedback(null); }} className="h-12 text-base" /></div>
+            <Button type="submit" className="h-12 w-full bg-success text-success-foreground hover:bg-success/90" disabled={!chosenPayment || !allocBill || !allocAmount || unallocated <= 0 || loading || !!loadError || busy}>{allocate.isPending ? <><Loader2 className="animate-spin" /> Adjusting…</> : <><Check /> Adjust Payment</>}</Button>
+          </form>
+          {chosenPayment && chosenPayment.payment_allocations.length > 0 && <details className="border-t pt-4">
+            <summary className="cursor-pointer text-sm font-semibold">Previous adjustments ({chosenPayment.payment_allocations.length})</summary>
+            <div className="mt-3 divide-y">
+              {chosenPayment.payment_allocations.map(a => <div key={a.id} className="flex items-center justify-between gap-2 py-2.5 text-sm"><span className="min-w-0 break-words">{a.bills?.bill_number ?? "Bill"} · <b>{inr(a.amount)}</b></span><div className="flex shrink-0 gap-1"><Button type="button" variant="ghost" size="icon" aria-label={`Edit ${a.bills?.bill_number ?? "adjustment"}`} title="Edit adjustment" disabled={busy} onClick={() => { setEditingAllocation(a.id); setEditBillId(a.bill_id); setEditAmount(String(a.amount)); }}><Pencil /></Button><Button type="button" variant="ghost" size="icon" aria-label={`Remove ${a.bills?.bill_number ?? "adjustment"}`} title="Remove adjustment" className="text-destructive hover:bg-destructive/10 hover:text-destructive" disabled={busy} onClick={() => setConfirmation({ kind: "remove", id: a.id, title: "Adjustment hatayein?", description: `${a.bills?.bill_number ?? "Bill"} se ${inr(a.amount)} ka adjustment hat jayega. Amount phir se available hoga.` })}><Trash2 /></Button></div></div>)}
+            </div>
+            {editingAllocation && <form className="mt-4 space-y-3 border-t pt-4" onSubmit={e => { e.preventDefault(); setConfirmation({ kind: "update", title: "Adjustment update karein?", description: `${shopBills.find(b => b.id === editBillId)?.bill_number ?? "Bill"} mein adjustment ${inr(Number(editAmount))} ho jayega.` }); }}>
+              <h3 className="text-sm font-bold">Edit adjustment</h3>
+              <div className="space-y-2"><Label htmlFor="edit-adjustment-bill">Select Bill</Label><PaymentToolPicker id="edit-adjustment-bill" label="Edit adjustment bill" value={editBillId} onChange={setEditBillId} options={billOptions(shopBills)} placeholder="Bill chunein" searchPlaceholder="Bill number search karein" disabled={busy} emptyText="Koi bill nahi hai." /></div>
+              <div className="space-y-2"><Label htmlFor="edit-adjustment-amount">Amount (₹)</Label><Input id="edit-adjustment-amount" type="number" inputMode="decimal" min="0.01" step="0.01" required value={editAmount} disabled={busy} onChange={e => setEditAmount(e.target.value)} className="h-11" /></div>
+              <div className="flex gap-2"><Button type="submit" className="h-11 flex-1" disabled={busy}>{updateAllocation.isPending ? "Saving…" : "Save adjustment"}</Button><Button type="button" variant="outline" className="h-11" disabled={busy} onClick={() => setEditingAllocation(null)}>Cancel</Button></div>
+            </form>}
+          </details>}
+          <p className="border-t pt-3 text-xs leading-relaxed text-muted-foreground">Example: ₹1,000 mein se ₹600 Bill A mein adjust karein. ₹400 baaki rahega.</p>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={transferOpen} onOpenChange={open => { if (!busy) setTransferOpen(open); }}>
+        <DialogContent className="max-h-[90dvh] w-[calc(100%-1.5rem)] overflow-y-auto rounded-lg p-5 sm:p-6">
+          <DialogHeader className="text-left"><DialogTitle className="pr-6">Transfer Payment</DialogTitle><DialogDescription>Ek bill se payment doosre bill mein shift karein.</DialogDescription></DialogHeader>
+          <ToolFeedback feedback={transferFeedback} />
+          {loadError && <p role="alert" className="text-sm text-destructive">Payments load nahi hue. Page refresh karke phir try karein.</p>}
+          <form className="space-y-5" onSubmit={e => { e.preventDefault(); setConfirmation({ kind: "transfer", title: "Transfer Payment confirm karein?", description: `${transferChosenPayment?.shops?.name ?? "Shop"}: ${inr(Number(transferAmount))} ko ${sourceOptions.find(b => b.value === transferSourceId)?.label ?? "From Bill"} se ${transferShopBills.find(b => b.id === transferTargetBillId)?.bill_number ?? "To Bill"} mein transfer karein.` }); }}>
+            <div className="space-y-2"><Label htmlFor="transfer-payment">1. Select Payment</Label>
+              <PaymentToolPicker id="transfer-payment" label="Select Payment" value={transferPaymentId} onChange={v => { setTransferPaymentId(v); setTransferSourceBillId(""); setTransferTargetBillId(""); setTransferAmount(""); setTransferFeedback(null); }} options={paymentOptions(paymentsToAdjust.filter(p => p.bill_id !== null || p.payment_allocations.length > 0))} placeholder={loading ? "Loading payments…" : "Payment chunein"} searchPlaceholder="Shop ya amount search karein" disabled={loading || !!loadError || busy} emptyText="Kisi bill mein payment assigned nahi hai." />
+            </div>
+            <div className="space-y-2"><Label htmlFor="transfer-from">2. Select From Bill</Label>
+              <PaymentToolPicker id="transfer-from" label="Select From Bill" value={transferSourceId} onChange={v => { setTransferSourceBillId(v); setTransferTargetBillId(""); setTransferAmount(""); setTransferFeedback(null); }} options={sourceOptions} placeholder="Jis bill se payment hatana hai" searchPlaceholder="From bill number search karein" disabled={!transferChosenPayment || loading || busy} emptyText="Is payment ka koi paid bill nahi hai." />
+              {transferSourceId && <p className="border-l-2 border-primary/40 pl-3 text-sm text-muted-foreground">Is bill mein paid: <b className="text-foreground">{inr(sourceAmount)}</b></p>}
+            </div>
+            <div className="space-y-2"><Label htmlFor="transfer-to">3. Select To Bill</Label>
+              <PaymentToolPicker id="transfer-to" label="Select To Bill" value={transferTargetBillId} onChange={v => { setTransferTargetBillId(v); setTransferAmount(""); setTransferFeedback(null); }} options={billOptions(targetBills)} placeholder="Jis bill mein payment lagana hai" searchPlaceholder="To bill number search karein" disabled={!transferSourceId || loading || busy} emptyText="Is shop ka koi doosra pending bill nahi hai." />
+            </div>
+            <div className="space-y-2"><Label htmlFor="transfer-amount">4. Enter Amount (₹)</Label><Input id="transfer-amount" type="number" inputMode="decimal" min="0.01" step="0.01" required placeholder="0.00" value={transferAmount} disabled={!transferTargetBillId || busy} onChange={e => { setTransferAmount(e.target.value); setTransferFeedback(null); }} className="h-12 text-base" /></div>
+            <Button type="submit" className="h-12 w-full" disabled={!transferChosenPayment || !transferSourceId || !transferTargetBillId || !transferAmount || loading || !!loadError || busy}>{transferPayment.isPending ? <><Loader2 className="animate-spin" /> Transferring…</> : <><ArrowRightLeft /> Transfer Payment</>}</Button>
+          </form>
+          <p className="border-t pt-3 text-xs leading-relaxed text-muted-foreground">Example: ₹400 Bill A se Bill B mein shift karein. Total collection same rahega.</p>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={confirmation !== null} onOpenChange={open => { if (!open) setConfirmation(null); }}>
+        <AlertDialogContent className="max-h-[90dvh] w-[calc(100%-1.5rem)] overflow-y-auto rounded-lg p-5 sm:p-6">
+          <AlertDialogHeader className="text-left"><AlertDialogTitle>{confirmation?.title}</AlertDialogTitle><AlertDialogDescription>{confirmation?.description}</AlertDialogDescription></AlertDialogHeader>
+          <p className="flex items-start gap-2 border-t pt-3 text-xs leading-relaxed text-muted-foreground"><ShieldCheck className="h-4 w-4 shrink-0 text-accent-foreground" />Original payment aur history safe rahenge. Total collection nahi badlega.</p>
+          <AlertDialogFooter className="gap-2"><AlertDialogCancel className="mt-0 h-11" disabled={busy}>Cancel</AlertDialogCancel><AlertDialogAction className="h-11" disabled={busy} onClick={() => {
+            if (!confirmation || busy) return;
+            if (confirmation.kind === "allocate") allocate.mutate();
+            else if (confirmation.kind === "transfer") transferPayment.mutate();
+            else if (confirmation.kind === "update") updateAllocation.mutate();
+            else if (confirmation.id) deleteAllocation.mutate(confirmation.id);
+          }}>Haan, confirm karein</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
