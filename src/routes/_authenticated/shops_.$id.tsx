@@ -9,6 +9,7 @@ import { Card, Empty, Stat, StatusBadge } from "@/components/bits";
 import { Button } from "@/components/ui/button";
 import { BillDialog, DeleteBillButton } from "@/components/bill-dialog";
 import { DriverBillAmountDialog } from "@/components/driver-bill-amount-dialog";
+import { PaymentDateDialog } from "@/components/payment-date-dialog";
 import { ShopDialog } from "./shops";
 import { pageMeta } from "@/lib/page-meta";
 import { useMe } from "@/lib/session";
@@ -27,6 +28,7 @@ function ShopDetail() {
   const [billOpen, setBillOpen] = useState(false);
   const [editBill, setEditBill] = useState<null | { id: string; shop_id: string; bill_date: string; amount: number; notes: string | null; paid_amount: number }>(null);
   const [driverEditBill, setDriverEditBill] = useState<null | { id: string; bill_number: string; amount: number; paid_amount: number }>(null);
+  const [paymentDateEdit, setPaymentDateEdit] = useState<null | { id: string; paid_at: string }>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteShopOpen, setDeleteShopOpen] = useState(false);
   const deleteShop = useMutation({
@@ -116,6 +118,7 @@ function ShopDetail() {
               <div className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
                 <div>{p.employee_name}{p.is_void ? " · Voided" : ""}{p.reference ? ` · Ref: ${p.reference}` : ""}</div>
                 {p.remarks && <div className="mt-1">Remark: {p.remarks}</div>}
+                {me?.role === "owner" && <div className="mt-2"><Button type="button" size="sm" variant="outline" onClick={() => setPaymentDateEdit({ id: p.id, paid_at: p.paid_at })}><Pencil className="h-3.5 w-3.5" /> Edit payment date</Button></div>}
                 {p.payment_allocations?.length > 0 && <div className="mt-1">Allocated: {p.payment_allocations.map((a: any) => `${a.bills?.bill_number ?? "Bill"} ${inr(a.amount)}`).join(" · ")}</div>}
               </div>
             </Card>
@@ -125,6 +128,7 @@ function ShopDetail() {
       <BillDialog open={billOpen} onOpenChange={setBillOpen} shopId={id} driverMode={me?.role === "driver"} />
       {editBill && <BillDialog key={editBill.id} open onOpenChange={(o) => !o && setEditBill(null)} bill={editBill} />}
       {driverEditBill && <DriverBillAmountDialog bill={driverEditBill} onClose={() => setDriverEditBill(null)} />}
+      {paymentDateEdit && <PaymentDateDialog paymentId={paymentDateEdit.id} paidAt={paymentDateEdit.paid_at} onClose={() => setPaymentDateEdit(null)} />}
       <AlertDialog open={deleteShopOpen} onOpenChange={setDeleteShopOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
