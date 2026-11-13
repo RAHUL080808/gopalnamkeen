@@ -103,6 +103,21 @@ describe("Independent payment workflows", () => {
     expect(calls.rpc).not.toHaveBeenCalled();
   });
 
+  it("keeps a failed adjustment from being retried automatically", async () => {
+    calls.insert.mockResolvedValueOnce({ error: new Error("Amount cannot exceed this bill's balance") });
+    renderTools();
+    fireEvent.click(screen.getByRole("button", { name: "Adjust Payment" }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByRole("combobox", { name: "Select Payment" }), { target: { value: "payment-1" } });
+    fireEvent.change(within(dialog).getByRole("combobox", { name: "Select Bill" }), { target: { value: "bill-a" } });
+    fireEvent.change(within(dialog).getByLabelText("3. Enter Amount (₹)"), { target: { value: "600" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Adjust Payment" }));
+    fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Haan, confirm karein" }));
+    await waitFor(() => expect(calls.insert).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Adjust Payment" })).toBeEnabled());
+    expect(calls.rpc).not.toHaveBeenCalled();
+  });
+
   it("retains adjustment selections separately when the transfer form is used", () => {
     renderTools();
     fireEvent.click(screen.getByRole("button", { name: "Adjust Payment" }));
