@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -9,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { OwnerPaymentTools } from "@/components/owner-payment-tools";
 import { cn } from "@/lib/utils";
 import { pageMeta } from "@/lib/page-meta";
+import { useMe } from "@/lib/session";
+import { PaymentDateDialog } from "@/components/payment-date-dialog";
 
 export const Route = createFileRoute("/_authenticated/payments")({
   validateSearch: z.object({ tab: z.enum(["all", "corrections"]).optional() }),
@@ -36,6 +39,8 @@ function PaymentsPage() {
 }
 
 function AllPayments() {
+  const { data: me } = useMe();
+  const [dateEdit, setDateEdit] = useState<null | { id: string; paid_at: string }>(null);
   const { data = [] } = useQuery({
     queryKey: ["all-payments"],
     queryFn: async () => (await supabase.from("payments").select("*, shops(name), bills(bill_number), payment_allocations(amount, bills(bill_number))").order("paid_at", { ascending: false }).limit(500)).data ?? [],
@@ -62,10 +67,11 @@ function AllPayments() {
           {(p as any).remarks && <div className="mt-2 text-xs text-muted-foreground">Remark: {(p as any).remarks}</div>}
           <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
             <span className="min-w-0 truncate capitalize">{p.employee_name} · {p.employee_role}</span>
-            <span className="shrink-0">{fmtDateTime(p.paid_at)}</span>
+            <div className="flex shrink-0 items-center gap-2"><span>{fmtDateTime(p.paid_at)}</span>{me?.role === "owner" && <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => setDateEdit({ id: p.id, paid_at: p.paid_at })}>Edit date</Button>}</div>
           </div>
         </Card>
       ))}
+      {dateEdit && <PaymentDateDialog paymentId={dateEdit.id} paidAt={dateEdit.paid_at} onClose={() => setDateEdit(null)} />}
     </div>
   );
 }
