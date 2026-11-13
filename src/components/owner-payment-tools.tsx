@@ -269,7 +269,7 @@ export function OwnerPaymentTools() {
                   const assigned = a.bill_id ? Number(a.amount) : a.payment_allocations.reduce((s,x) => s + Number(x.amount),0);
                   const label = a.bill_id ? `Bill ${a.bills?.bill_number ?? ""}` : assigned > 0 ? "Allocated payment" : "Unallocated advance";
                   return <SelectItem key={a.id} value={a.id}>{a.shops?.name ?? "Shop"} · {label} · {inr(a.amount)} · {fmtDateTime(a.paid_at)}</SelectItem>;
-                })}{filteredPaymentsToAdjust.length === 0 && <div className="px-2 py-3 text-sm text-muted-foreground">No matching payment found</div>}</SelectContent>
+                })}{filteredPaymentsToAdjust.length === 0 && <SelectItem value="__no_payment_match__" disabled>No matching payment found</SelectItem>}</SelectContent>
               </Select>
             </div>
             {chosenPayment && <>
@@ -291,7 +291,7 @@ export function OwnerPaymentTools() {
                   <Input value={targetBillSearch} onChange={e => setTargetBillSearch(e.target.value)} placeholder="Search target bill number…" />
                   <Select value={transferTargetBillId} onValueChange={setTransferTargetBillId}>
                     <SelectTrigger><SelectValue placeholder="Choose target bill" /></SelectTrigger>
-                    <SelectContent>{filteredTargetBills.map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}{filteredTargetBills.length === 0 && <div className="px-2 py-3 text-sm text-muted-foreground">No matching bill found</div>}</SelectContent>
+                    <SelectContent>{filteredTargetBills.map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}{filteredTargetBills.length === 0 && <SelectItem value="__no_bill_match__" disabled>No matching bill found</SelectItem>}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5"><Label>Amount to transfer (₹)</Label>
