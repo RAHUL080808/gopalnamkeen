@@ -160,17 +160,22 @@ export function OwnerPaymentTools() {
           <form className="space-y-3" onSubmit={e => { e.preventDefault(); addPayment.mutate(); }}>
             <div className="space-y-1.5"><Label>Shop</Label>
               <Input
+                list="owner-payment-shop-options"
                 value={shopSearch}
-                onChange={e => { setShopSearch(e.target.value); setShopId(""); setBillId("advance"); }}
-                placeholder="Type shop name to search…"
+                onChange={e => {
+                  const value = e.target.value;
+                  setShopSearch(value);
+                  const match = shops.find(s => s.name.toLowerCase() === value.trim().toLowerCase());
+                  setShopId(match?.id ?? "");
+                  setBillId("advance");
+                }}
+                placeholder="Search or select shop…"
                 autoComplete="off"
               />
-              <Select value={shopId} onValueChange={v => { setShopId(v); setBillId("advance"); setShopSearch(shops.find(s => s.id === v)?.name ?? ""); }}>
-                <SelectTrigger><SelectValue placeholder="Choose shop" /></SelectTrigger>
-                <SelectContent>
-                  {filteredShops.length ? filteredShops.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>) : <div className="px-2 py-3 text-sm text-muted-foreground">No matching shop found</div>}
-                </SelectContent>
-              </Select>
+              <datalist id="owner-payment-shop-options">
+                {filteredShops.map(s => <option key={s.id} value={s.name} />)}
+              </datalist>
+              {shopSearch.trim() && !shopId && <p className="text-xs text-muted-foreground">List se shop select karein.</p>}
             </div>
             <div className="space-y-1.5"><Label>Payment for</Label>
               <Select value={billId} onValueChange={setBillId}>
