@@ -147,18 +147,19 @@ export function OwnerPaymentTools() {
   const transferPayment = useMutation({
     mutationFn: async () => {
       const value = Number(transferAmount);
-      if (!chosenPayment || !transferSourceBillId || !transferTargetBillId || !(value > 0)) {
+      const sourceId = transferSourceBillId || chosenPayment?.bill_id || "";
+      if (!chosenPayment || !sourceId || !transferTargetBillId || !(value > 0)) {
         throw new Error("Choose source bill, target bill and a valid amount");
       }
-      const sourceAmount = chosenPayment.bill_id === transferSourceBillId
+      const sourceAmount = chosenPayment.bill_id === sourceId
         ? Number(chosenPayment.amount)
-        : Number(chosenPayment.payment_allocations.find(a => a.bill_id === transferSourceBillId)?.amount ?? 0);
+        : Number(chosenPayment.payment_allocations.find(a => a.bill_id === sourceId)?.amount ?? 0);
       if (value > sourceAmount) throw new Error("Transfer amount exceeds the source bill payment");
       const target = shopBills.find(b => b.id === transferTargetBillId);
       if (!target || value > Number(target.balance)) throw new Error("Amount cannot exceed the target bill balance");
       const { error } = await (supabase.rpc as any)("owner_transfer_bill_payment", {
         _payment_id: chosenPayment.id,
-        _source_bill_id: transferSourceBillId,
+        _source_bill_id: sourceId,
         _target_bill_id: transferTargetBillId,
         _amount: value,
         _reason: "Owner transferred payment between bills",
@@ -255,7 +256,7 @@ export function OwnerPaymentTools() {
           <DialogHeader><DialogTitle>Adjust Payment</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5"><Label>Payment to adjust / transfer</Label>
-              <Select value={allocPayment} onValueChange={v => { setAllocPayment(v); setAllocBill(""); setAllocAmount(""); }}>
+              <Select value={allocPayment} onValueChange={v => { setAllocPayment(v); setAllocBill(""); setAllocAmount(""); setTransferSourceBillId(""); setTransferTargetBillId(""); setTransferAmount(""); }}>
                 <SelectTrigger><SelectValue placeholder="Choose payment" /></SelectTrigger>
                 <SelectContent>{paymentsToAdjust.map(a => {
                   const assigned = a.bill_id ? Number(a.amount) : a.payment_allocations.reduce((s,x) => s + Number(x.amount),0);
@@ -281,7 +282,7 @@ export function OwnerPaymentTools() {
                 <div className="space-y-1.5"><Label>To bill</Label>
                   <Select value={transferTargetBillId} onValueChange={setTransferTargetBillId}>
                     <SelectTrigger><SelectValue placeholder="Choose target bill" /></SelectTrigger>
-                    <SelectContent>{shopBills.filter(b => b.id !== (transferSourceBillId || chosenPayment.bill_id)).map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}</SelectContent>
+                    <SelectContent>{shopBills.filter(b => b.id !== (transferSourceBillId || chosenPayment.bill_id) && Number(b.balance) > 0).map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5"><Label>Amount to transfer (₹)</Label>
