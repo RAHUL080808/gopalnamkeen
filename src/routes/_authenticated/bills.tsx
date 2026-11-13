@@ -21,7 +21,8 @@ const FILTERS = [
   { v: "unpaid", l: "Unpaid" },
   { v: "partial", l: "Partial" },
   { v: "paid", l: "Paid" },
-  { v: "overdue", l: "Overdue 7+ days" },
+  { v: "overdue_1m", l: "Overdue 1+ month" },
+  { v: "overdue_6m", l: "Overdue 6+ months" },
 ];
 
 function BillsPage() {
@@ -40,8 +41,15 @@ function BillsPage() {
     if (y === undefined || m === undefined || d === undefined) return NaN;
     return Math.floor((Date.UTC(todayUtc.getFullYear(), todayUtc.getMonth(), todayUtc.getDate()) - Date.UTC(y, m - 1, d)) / 86400000);
   };
-  const list = [...(filter === "all" ? bills : filter === "overdue" ? bills.filter((b) => Number(b.balance) > 0 && ageInDays(b.bill_date) >= 7) : bills.filter((b) => b.status === filter))]
-    .filter((b) => !selectedDate || b.bill_date === selectedDate);
+  const list = [...(
+    filter === "all"
+      ? bills
+      : filter === "overdue_1m"
+        ? bills.filter((b) => Number(b.balance) > 0 && ageInDays(b.bill_date) >= 30)
+        : filter === "overdue_6m"
+          ? bills.filter((b) => Number(b.balance) > 0 && ageInDays(b.bill_date) >= 180)
+          : bills.filter((b) => b.status === filter)
+  )].filter((b) => !selectedDate || b.bill_date === selectedDate);
 
   return (
     <div className="space-y-5">
