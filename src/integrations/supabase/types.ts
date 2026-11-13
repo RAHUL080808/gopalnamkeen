@@ -204,6 +204,9 @@ export type Database = {
           employee_role: string
           id: string
           is_void: boolean
+          voided_at: string | null
+          voided_by: string | null
+          void_reason: string | null
           mode: Database["public"]["Enums"]["payment_mode"]
           paid_at: string
           reference: string | null
@@ -219,6 +222,9 @@ export type Database = {
           employee_role?: string
           id?: string
           is_void?: boolean
+          voided_at?: string | null
+          voided_by?: string | null
+          void_reason?: string | null
           mode: Database["public"]["Enums"]["payment_mode"]
           paid_at?: string
           reference?: string | null
@@ -234,6 +240,9 @@ export type Database = {
           employee_role?: string
           id?: string
           is_void?: boolean
+          voided_at?: string | null
+          voided_by?: string | null
+          void_reason?: string | null
           mode?: Database["public"]["Enums"]["payment_mode"]
           paid_at?: string
           reference?: string | null
@@ -354,6 +363,7 @@ export type Database = {
       is_staff: { Args: { _user_id: string }; Returns: boolean }
       owner_exists: { Args: never; Returns: boolean }
       recalc_bill: { Args: { _bill_id: string }; Returns: undefined }
+      owner_void_payment: { Args: { _payment_id: string; _reason: string }; Returns: undefined }
     }
     Enums: {
       app_role: "owner" | "driver" | "salesman"
