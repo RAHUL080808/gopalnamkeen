@@ -40,7 +40,19 @@ function PaymentsPage() {
 
 function AllPayments() {
   const { data: me } = useMe();
+  const qc = useQueryClient();
   const [dateEdit, setDateEdit] = useState<null | { id: string; paid_at: string }>(null);
+  const voidPayment = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const { error } = await supabase.rpc("owner_void_payment", { _payment_id: id, _reason: reason });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Payment cancelled and balances recalculated");
+      qc.invalidateQueries();
+    },
+    onError: (error) => toast.error((error as Error).message),
+  });
   const { data = [] } = useQuery({
     queryKey: ["all-payments"],
     queryFn: async () => (await supabase.from("payments").select("*, shops(name), bills(bill_number), payment_allocations(amount, bills(bill_number))").order("paid_at", { ascending: false }).limit(500)).data ?? [],
@@ -65,9 +77,10 @@ function AllPayments() {
           </div>
           {(p as any).payment_allocations?.length > 0 && <div className="mt-2 rounded-xl bg-muted/50 p-2.5 text-xs text-muted-foreground">Allocated to: {(p as any).payment_allocations.map((a: any) => `${a.bills?.bill_number ?? "Bill"} · ${inr(a.amount)}`).join("  /  ")}</div>}
           {(p as any).remarks && <div className="mt-2 text-xs text-muted-foreground">Remark: {(p as any).remarks}</div>}
-          <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
+          {p.is_void && (p as any).void_reason && <div className="mt-2 rounded-lg bg-destructive/5 p-2 text-xs text-muted-foreground">Cancellation reason: {(p as any).void_reason}</div>}
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
             <span className="min-w-0 truncate capitalize">{p.employee_name} · {p.employee_role}</span>
-            <div className="flex shrink-0 items-center gap-2"><span>{fmtDateTime(p.paid_at)}</span>{me?.role === "owner" && <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => setDateEdit({ id: p.id, paid_at: p.paid_at })}>Edit date</Button>}</div>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2"><span>{fmtDateTime(p.paid_at)}</span>{me?.role === "owner" && !p.is_void && <><Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => setDateEdit({ id: p.id, paid_at: p.paid_at })}>Edit date</Button><Button size="sm" variant="destructive" className="h-7 px-2 text-[11px]" disabled={voidPayment.isPending} onClick={() => { const reason = window.prompt("Payment cancel karne ka reason likhein:"); if (reason === null) return; if (reason.trim().length < 3) { toast.error("Reason kam se kam 3 characters ka hona chahiye"); return; } if (window.confirm("Is payment ko cancel karein? Bill/shop balance dobara calculate hoga.")) voidPayment.mutate({ id: p.id, reason: reason.trim() }); }}>Cancel payment</Button></>}</div>
           </div>
         </Card>
       ))}
