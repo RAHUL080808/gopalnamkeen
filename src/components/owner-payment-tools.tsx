@@ -14,7 +14,7 @@ import { WhatsAppReceiptDialog } from "@/components/whatsapp-receipt-dialog";
 
 type Shop = { id: string; name: string; phone: string | null };
 type Bill = { id: string; bill_number: string; amount: number; balance: number; shop_id: string };
-type Advance = { id: string; shop_id: string; amount: number; paid_at: string; remarks: string | null; reference: string | null; shops: { name: string } | null; payment_allocations: { id: string; amount: number; bill_id: string; bills: { bill_number: string } | null }[] };
+type Advance = { id: string; shop_id: string; bill_id: string | null; amount: number; paid_at: string; remarks: string | null; reference: string | null; shops: { name: string } | null; bills: { bill_number: string } | null; payment_allocations: { id: string; amount: number; bill_id: string; bills: { bill_number: string } | null }[] };
 
 export function OwnerPaymentTools() {
   const qc = useQueryClient();
@@ -52,8 +52,8 @@ export function OwnerPaymentTools() {
     queryKey: ["owner-paymentsToAdjust"],
     queryFn: async () => {
       const { data, error } = await (supabase.from("payments") as any)
-        .select("id,shop_id,amount,paid_at,remarks,reference,shops(name),payment_allocations(id,amount,bill_id,bills(bill_number))")
-        .is("bill_id", null).eq("is_void", false).order("paid_at", { ascending: false });
+        .select("id,shop_id,bill_id,amount,paid_at,remarks,reference,shops(name),bills(bill_number),payment_allocations(id,amount,bill_id,bills(bill_number))")
+        .eq("is_void", false).order("paid_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Advance[];
     },
@@ -108,6 +108,9 @@ export function OwnerPaymentTools() {
   const [editingAllocation, setEditingAllocation] = useState<string | null>(null);
   const [editBillId, setEditBillId] = useState("");
   const [editAmount, setEditAmount] = useState("");
+  const [transferSourceBillId, setTransferSourceBillId] = useState("");
+  const [transferTargetBillId, setTransferTargetBillId] = useState("");
+  const [transferAmount, setTransferAmount] = useState("");
 
   const allocate = useMutation({
     mutationFn: async () => {
@@ -138,6 +141,35 @@ export function OwnerPaymentTools() {
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Allocation updated"); setEditingAllocation(null); setEditBillId(""); setEditAmount(""); qc.invalidateQueries(); },
+    onError: e => toast.error((e as Error).message),
+  });
+
+  const transferPayment = useMutation({
+    mutationFn: async () => {
+      const value = Number(transferAmount);
+      if (!chosenPayment || !transferSourceBillId || !transferTargetBillId || !(value > 0)) {
+        throw new Error("Choose source bill, target bill and a valid amount");
+      }
+      const sourceAmount = chosenPayment.bill_id === transferSourceBillId
+        ? Number(chosenPayment.amount)
+        : Number(chosenPayment.payment_allocations.find(a => a.bill_id === transferSourceBillId)?.amount ?? 0);
+      if (value > sourceAmount) throw new Error("Transfer amount exceeds the source bill payment");
+      const target = shopBills.find(b => b.id === transferTargetBillId);
+      if (!target || value > Number(target.balance)) throw new Error("Amount cannot exceed the target bill balance");
+      const { error } = await (supabase.rpc as any)("owner_transfer_bill_payment", {
+        _payment_id: chosenPayment.id,
+        _source_bill_id: transferSourceBillId,
+        _target_bill_id: transferTargetBillId,
+        _amount: value,
+        _reason: "Owner transferred payment between bills",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Payment transferred; total collection is unchanged");
+      setTransferAmount(""); setTransferSourceBillId(""); setTransferTargetBillId("");
+      qc.invalidateQueries();
+    },
     onError: e => toast.error((e as Error).message),
   });
 
@@ -222,17 +254,43 @@ export function OwnerPaymentTools() {
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Adjust Payment</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1.5"><Label>Without Bill Payment</Label>
+            <div className="space-y-1.5"><Label>Payment to adjust / transfer</Label>
               <Select value={allocPayment} onValueChange={v => { setAllocPayment(v); setAllocBill(""); setAllocAmount(""); }}>
                 <SelectTrigger><SelectValue placeholder="Choose payment" /></SelectTrigger>
                 <SelectContent>{paymentsToAdjust.map(a => {
-                  const left = Number(a.amount) - a.payment_allocations.reduce((s,x) => s + Number(x.amount),0);
-                  return left > 0 || a.payment_allocations.length > 0 ? <SelectItem key={a.id} value={a.id}>{a.shops?.name ?? "Shop"} · {inr(left)} unassigned · {fmtDateTime(a.paid_at)}</SelectItem> : null;
+                  const assigned = a.bill_id ? Number(a.amount) : a.payment_allocations.reduce((s,x) => s + Number(x.amount),0);
+                  const label = a.bill_id ? `Bill ${a.bills?.bill_number ?? ""}` : assigned > 0 ? "Allocated payment" : "Unallocated advance";
+                  return <SelectItem key={a.id} value={a.id}>{a.shops?.name ?? "Shop"} · {label} · {inr(a.amount)} · {fmtDateTime(a.paid_at)}</SelectItem>;
                 })}</SelectContent>
               </Select>
             </div>
             {chosenPayment && <>
-              <p className="rounded-lg bg-muted p-3 text-sm">Received {inr(chosenPayment.amount)} · Allocated {inr(allocated)} · <b>Available {inr(unallocated)}</b></p>
+              <p className="rounded-lg bg-muted p-3 text-sm">Received {inr(chosenPayment.amount)} · Allocated {inr(chosenPayment.bill_id ? chosenPayment.amount : allocated)} · <b>Available {inr(chosenPayment.bill_id ? 0 : unallocated)}</b></p>
+              {(chosenPayment.bill_id || chosenPayment.payment_allocations.length > 0) && <div className="space-y-2 rounded-lg border p-3">
+                <Label>Transfer payment to another bill</Label>
+                <div className="space-y-1.5"><Label>From bill</Label>
+                  <Select value={transferSourceBillId || (chosenPayment.bill_id ?? "")} onValueChange={setTransferSourceBillId}>
+                    <SelectTrigger><SelectValue placeholder="Choose source bill" /></SelectTrigger>
+                    <SelectContent>
+                      {chosenPayment.bill_id
+                        ? <SelectItem value={chosenPayment.bill_id}>{chosenPayment.bills?.bill_number ?? "Current bill"} · {inr(chosenPayment.amount)}</SelectItem>
+                        : chosenPayment.payment_allocations.map(a => <SelectItem key={a.bill_id} value={a.bill_id}>{a.bills?.bill_number ?? "Bill"} · {inr(a.amount)}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5"><Label>To bill</Label>
+                  <Select value={transferTargetBillId} onValueChange={setTransferTargetBillId}>
+                    <SelectTrigger><SelectValue placeholder="Choose target bill" /></SelectTrigger>
+                    <SelectContent>{shopBills.filter(b => b.id !== (transferSourceBillId || chosenPayment.bill_id)).map(b => <SelectItem key={b.id} value={b.id}>{b.bill_number} · Due {inr(b.balance)}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5"><Label>Amount to transfer (₹)</Label>
+                  <Input type="number" min="0.01" step="0.01" value={transferAmount} onChange={e => setTransferAmount(e.target.value)} />
+                </div>
+                <Button type="button" className="w-full" disabled={transferPayment.isPending} onClick={() => {
+                  if (window.confirm("Transfer this amount to the selected bill? The payment entry and total collection will remain unchanged.")) transferPayment.mutate();
+                }}>{transferPayment.isPending ? "Transferring…" : "Transfer between bills"}</Button>
+              </div>}
               {chosenPayment.payment_allocations.length > 0 && <div className="space-y-2 rounded-lg border p-3">
                 <Label>Existing bill allocations</Label>
                 {chosenPayment.payment_allocations.map(a => <div key={a.id} className="flex items-center justify-between gap-2 text-sm">
@@ -255,7 +313,7 @@ export function OwnerPaymentTools() {
               <div className="space-y-1.5"><Label>Amount to allocate (₹)</Label><Input type="number" min="0.01" max={Math.min(unallocated, Number(shopBills.find(b=>b.id===allocBill)?.balance ?? 0))} step="0.01" value={allocAmount} onChange={e=>setAllocAmount(e.target.value)} /></div>
               <Button className="w-full" disabled={allocate.isPending} onClick={() => allocate.mutate()}>{allocate.isPending ? "Allocating…" : "Adjust against bill"}</Button>
             </>}
-            {paymentsToAdjust.length === 0 && <p className="text-sm text-muted-foreground">No Without Bill Payments available to adjust.</p>}
+            {paymentsToAdjust.length === 0 && <p className="text-sm text-muted-foreground">No payments available to adjust.</p>}
           </div>
         </DialogContent>
       </Dialog>
