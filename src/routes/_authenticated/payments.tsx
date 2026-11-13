@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -10,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { OwnerPaymentTools } from "@/components/owner-payment-tools";
 import { cn } from "@/lib/utils";
 import { pageMeta } from "@/lib/page-meta";
-import { useMe } from "@/lib/session";
+import { meQuery } from "@/lib/session";
 import { PaymentDateDialog } from "@/components/payment-date-dialog";
 
 export const Route = createFileRoute("/_authenticated/payments")({
@@ -39,7 +40,7 @@ function PaymentsPage() {
 }
 
 function AllPayments() {
-  const { data: me } = useMe();
+  const { data: me } = useQuery(meQuery);
   const [dateEdit, setDateEdit] = useState<null | { id: string; paid_at: string }>(null);
   const { data = [] } = useQuery({
     queryKey: ["all-payments"],
