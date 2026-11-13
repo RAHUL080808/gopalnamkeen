@@ -32,3 +32,4 @@ use the editor.
 - Shop imports parse Excel in the browser and use authenticated owner-checked server functions plus an RLS-bound SQL import function; a table lock serializes duplicate-mobile checks and inserts without updating existing shops.
 - Keep canonical import shop fields synchronized with legacy name/contact_name/phone fields using the database trigger so existing shop forms and dashboards remain compatible.
 - Content route metadata uses shared pageMeta for complete per-page social and description tags without affecting authentication or page behavior.
+- Owner payment adjustment and transfer use independent UI state and confirmation screens while retaining existing payment mutations; this prevents one operation's selections from affecting the other.

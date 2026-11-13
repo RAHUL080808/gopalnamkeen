@@ -1,6 +1,9 @@
 # Shop Excel import
 # Payments page runtime error
 - [x] Fix state initialization order and verify signed-in Payments and adjustment search; add regression coverage and clear existing compilation errors.
+# Owner Payment Tools simplicity
+- [x] Separate Adjustment and Transfer into independent, mobile-friendly workflows with simple labels, examples and confirmations.
+- [x] Preserve payment mutations and security rules; verify signed-in real payment selections through confirmations without saving, regression payload/safety tests and compilation.
 # Driver bill amount editing
 - [ ] Add database-enforced amount-only driver edits and immutable owner-readable audit history.
 - [ ] Add driver editing and owner history to existing bill screens.
