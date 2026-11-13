@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      bill_amount_edit_history: {
+        Row: {
+          bill_id: string | null
+          edited_at: string
+          edited_by: string
+          id: string
+          new_amount: number
+          old_amount: number
+        }
+        Insert: {
+          bill_id?: string | null
+          edited_at?: string
+          edited_by: string
+          id?: string
+          new_amount: number
+          old_amount: number
+        }
+        Update: {
+          bill_id?: string | null
+          edited_at?: string
+          edited_by?: string
+          id?: string
+          new_amount?: number
+          old_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bill_amount_edit_history_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bills: {
         Row: {
           amount: number
@@ -94,6 +129,61 @@ export type Database = {
             foreignKeyName: "daily_order_bills_bill_id_fkey"
             columns: ["bill_id"]
             isOneToOne: true
+            referencedRelation: "bills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_allocation_transfer_history: {
+        Row: {
+          amount: number
+          id: string
+          payment_id: string | null
+          reason: string | null
+          source_bill_id: string | null
+          target_bill_id: string | null
+          transferred_at: string
+          transferred_by: string
+        }
+        Insert: {
+          amount: number
+          id?: string
+          payment_id?: string | null
+          reason?: string | null
+          source_bill_id?: string | null
+          target_bill_id?: string | null
+          transferred_at?: string
+          transferred_by: string
+        }
+        Update: {
+          amount?: number
+          id?: string
+          payment_id?: string | null
+          reason?: string | null
+          source_bill_id?: string | null
+          target_bill_id?: string | null
+          transferred_at?: string
+          transferred_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_allocation_transfer_history_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_allocation_transfer_history_source_bill_id_fkey"
+            columns: ["source_bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_allocation_transfer_history_target_bill_id_fkey"
+            columns: ["target_bill_id"]
+            isOneToOne: false
             referencedRelation: "bills"
             referencedColumns: ["id"]
           },
@@ -194,6 +284,41 @@ export type Database = {
           },
         ]
       }
+      payment_date_edit_history: {
+        Row: {
+          edited_at: string
+          edited_by: string
+          id: string
+          new_paid_at: string
+          old_paid_at: string
+          payment_id: string | null
+        }
+        Insert: {
+          edited_at?: string
+          edited_by: string
+          id?: string
+          new_paid_at: string
+          old_paid_at: string
+          payment_id?: string | null
+        }
+        Update: {
+          edited_at?: string
+          edited_by?: string
+          id?: string
+          new_paid_at?: string
+          old_paid_at?: string
+          payment_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_date_edit_history_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
@@ -234,9 +359,6 @@ export type Database = {
           employee_role?: string
           id?: string
           is_void?: boolean
-          voided_at?: string | null
-          voided_by?: string | null
-          void_reason?: string | null
           mode?: Database["public"]["Enums"]["payment_mode"]
           paid_at?: string
           reference?: string | null
@@ -346,6 +468,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      driver_create_bill: {
+        Args: {
+          _amount: number
+          _bill_date: string
+          _notes?: string
+          _shop_id: string
+        }
+        Returns: string
+      }
+      driver_create_shop: {
+        Args: {
+          _address?: string
+          _contact_name?: string
+          _name: string
+          _phone?: string
+        }
+        Returns: string
+      }
+      driver_update_bill_amount: {
+        Args: { _bill_id: string; _new_amount: number }
+        Returns: undefined
+      }
+      driver_update_shop_contact: {
+        Args: {
+          _address: string
+          _contact_name: string
+          _name: string
+          _phone: string
+          _shop_id: string
+        }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -355,18 +509,26 @@ export type Database = {
       }
       import_shops: { Args: { _rows: Json }; Returns: Json }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      owner_delete_bill_with_payments: {
+        Args: { _bill_id: string }
+        Returns: undefined
+      }
       owner_exists: { Args: never; Returns: boolean }
-      recalc_bill: { Args: { _bill_id: string }; Returns: undefined }
       owner_transfer_bill_payment: {
         Args: {
           _amount: number
           _payment_id: string
-          _reason?: string | null
+          _reason?: string
           _source_bill_id: string
           _target_bill_id: string
         }
         Returns: undefined
       }
+      owner_update_payment_date: {
+        Args: { _paid_at: string; _payment_id: string }
+        Returns: undefined
+      }
+      recalc_bill: { Args: { _bill_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "owner" | "driver" | "salesman"
