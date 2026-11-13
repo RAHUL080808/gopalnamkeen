@@ -31,7 +31,7 @@ export function PaymentDateDialog({
 
   const updateDate = useMutation({
     mutationFn: async () => {
-      const match = /^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/.exec(dateValue.trim());
+      const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dateValue.trim());
       if (!match) throw new Error("Date DD/MM/YYYY format mein enter karein");
       const day = Number(match[1]);
       const month = Number(match[2]);
