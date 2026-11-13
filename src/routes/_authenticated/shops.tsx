@@ -129,6 +129,7 @@ function ShopsPage() {
           ))}
         </div>
       )}
+      </div>
       <ShopDialog open={open} onOpenChange={setOpen} driverMode={me?.role === "driver"} />
       {me?.role === "owner" && <ShopImportDialog open={importOpen} onOpenChange={setImportOpen} />}
     </div>
