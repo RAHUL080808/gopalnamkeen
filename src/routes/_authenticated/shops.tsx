@@ -29,7 +29,7 @@ export type ShopForm = { name: string; contact_name: string; phone: string; addr
 
 function ShopsPage() {
   const [q, setQ] = useState("");
-  const [sortBy, setSortBy] = useState("overdue");
+  const [sortBy, setSortBy] = useState(() => localStorage.getItem("shops-sort-by") || "overdue");
   const [open, setOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const { data: me } = useMe();
@@ -95,7 +95,7 @@ function ShopsPage() {
             </Button>
           )}
         </div>
-        <select aria-label="Sort shops" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-12 rounded-2xl border border-border/70 bg-card px-3 text-sm font-semibold shadow-sm outline-none focus:border-primary sm:w-52">
+        <select aria-label="Sort shops" value={sortBy} onChange={(e) => { const value = e.target.value; setSortBy(value); localStorage.setItem("shops-sort-by", value); }} className="h-12 rounded-2xl border border-border/70 bg-card px-3 text-sm font-semibold shadow-sm outline-none focus:border-primary sm:w-52">
           <option value="overdue">Oldest overdue first</option>
           <option value="amount">Highest outstanding first</option>
           <option value="name">Shop name A–Z</option>
