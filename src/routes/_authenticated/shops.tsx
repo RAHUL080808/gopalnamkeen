@@ -29,6 +29,7 @@ export type ShopForm = { name: string; contact_name: string; phone: string; addr
 
 function ShopsPage() {
   const [q, setQ] = useState("");
+  const [sortBy, setSortBy] = useState("overdue");
   const [open, setOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const { data: me } = useMe();
@@ -37,16 +38,30 @@ function ShopsPage() {
     queryFn: async () => {
       const [{ data: s }, { data: b }] = await Promise.all([
         supabase.from("shops").select("*").order("name"),
-        supabase.from("bills").select("shop_id, balance"),
+        supabase.from("bills").select("shop_id, balance, bill_date"),
       ]);
-      return (s ?? []).map((x) => ({ ...x, due: (b ?? []).filter((y) => y.shop_id === x.id).reduce((t, y) => t + Number(y.balance), 0) }));
+      const today = new Date();
+      const ageInDays = (date: string) => {
+        const [year, month, day] = date.split("-").map(Number);
+        if (!year || !month || !day) return 0;
+        return Math.max(0, Math.floor((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(year, month - 1, day)) / 86400000));
+      };
+      return (s ?? []).map((x) => {
+        const shopBills = (b ?? []).filter((y) => y.shop_id === x.id);
+        const outstandingBills = shopBills.filter((y) => Number(y.balance) > 0);
+        return {
+          ...x,
+          due: shopBills.reduce((t, y) => t + Number(y.balance), 0),
+          oldestOverdueDays: outstandingBills.reduce((max, y) => Math.max(max, ageInDays(y.bill_date)), 0),
+        };
+      });
     },
   });
   const list = useMemo(() => {
     const term = q.trim().toLocaleLowerCase();
-    if (!term) return shops;
     const digits = term.replace(/\\D/g, "");
-    return shops.filter((s) => {
+    const filtered = shops.filter((s) => {
+      if (!term) return true;
       const searchable = [s.name, s.contact_name, s.phone, s.address]
         .filter(Boolean)
         .join(" ")
@@ -54,14 +69,19 @@ function ShopsPage() {
       const phoneDigits = String(s.phone ?? "").replace(/\\D/g, "");
       return searchable.includes(term) || (digits.length >= 2 && phoneDigits.includes(digits));
     });
-  }, [shops, q]);
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "overdue") return b.oldestOverdueDays - a.oldestOverdueDays || b.due - a.due || a.name.localeCompare(b.name);
+      if (sortBy === "amount") return b.due - a.due || a.name.localeCompare(b.name);
+      return a.name.localeCompare(b.name);
+    });
+  }, [shops, q, sortBy]);
 
   return (
     <div className="space-y-5">
       <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#132443] via-[#20395f] to-[#315477] p-5 text-white shadow-xl shadow-slate-900/10 sm:p-7"><div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full border-[25px] border-white/[0.06]" /><div className="relative flex items-end justify-between gap-3"><div><div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/55">Customer directory</div><h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Shops</h1><p className="mt-1 text-xs text-white/65">Manage retailer profiles and keep track of pending balances.</p></div><Button className="shrink-0 rounded-xl bg-white text-slate-900 shadow-lg hover:bg-slate-100" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Add shop</Button></div><div className="relative mt-5 flex gap-5 border-t border-white/10 pt-4"><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Total shops</div><div className="mt-1 text-xl font-extrabold tabular">{shops.length}</div></div><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Total outstanding</div><div className="mt-1 text-xl font-extrabold tabular text-amber-200">{inr(shops.reduce((sum, s) => sum + s.due, 0))}</div></div></div></div>
       {me?.role === "owner" && <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="h-4 w-4" /> Import Excel</Button>}
-      <div className="space-y-2">
-        <div className="relative">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="relative min-w-0 flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search by shop name, mobile or contact person"
@@ -75,10 +95,16 @@ function ShopsPage() {
             </Button>
           )}
         </div>
-        <p className="px-1 text-xs text-muted-foreground">
-          {q.trim() ? `${list.length} matching shop${list.length === 1 ? "" : "s"}` : "Search using shop name, mobile number, contact person or area."}
-        </p>
+        <select aria-label="Sort shops" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-12 rounded-2xl border border-border/70 bg-card px-3 text-sm font-semibold shadow-sm outline-none focus:border-primary sm:w-52">
+          <option value="overdue">Oldest overdue first</option>
+          <option value="amount">Highest outstanding first</option>
+          <option value="name">Shop name A–Z</option>
+        </select>
       </div>
+      <div className="space-y-2">
+        <p className="px-1 text-xs text-muted-foreground">
+          {q.trim() ? `${list.length} matching shop${list.length === 1 ? "" : "s"}` : "Shops with the oldest unpaid bills appear first."}
+        </p>
       {list.length === 0 ? <Empty>{q.trim() ? "No matching shop found. Check the name or mobile number." : "No shops yet. Add your first shop."}</Empty> : (
         <div className="grid gap-2 sm:grid-cols-2">
           {list.map((s) => (
@@ -94,6 +120,7 @@ function ShopsPage() {
                 <div className="shrink-0 text-right">
                   <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Outstanding</div>
                   <div className={`mt-0.5 tabular text-sm font-extrabold ${s.due > 0 ? "text-rose-700" : "text-emerald-700"}`}>{inr(s.due)}</div>
+                  {s.oldestOverdueDays > 0 && <div className="mt-1 text-[10px] font-bold text-rose-700">{s.oldestOverdueDays} days since oldest unpaid bill</div>}
                   {s.phone && <a href={`tel:${String(s.phone).replace(/[^\\d+]/g, "")}`} aria-label={`Call ${s.name}`} title="Call shop" className="mt-1 inline-flex h-7 items-center gap-1 rounded-lg border border-slate-200 px-2 text-[10px] font-bold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800"><Phone className="h-3 w-3" /> Call</a>}
                 </div>
               </div>
