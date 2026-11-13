@@ -231,14 +231,12 @@ export function OwnerPaymentTools() {
           <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-md bg-accent text-accent-foreground"><Check className="h-5 w-5" /></div>
           <h2 className="text-base font-extrabold">ADJUST PAYMENT</h2>
           <p className="mt-1 text-sm text-muted-foreground">Payment ko kisi bill ke against adjust karein.</p>
-          <p className="mb-4 mt-3 border-l-2 border-success/40 pl-3 text-xs leading-relaxed text-muted-foreground">Example: ₹1,000 Without Bill Payment mein se ₹600 Bill A mein adjust karein. ₹400 baaki rahega.</p>
           <Button variant="outline" className="mt-auto h-11 w-full border-success/30 text-accent-foreground hover:bg-accent" onClick={() => setAllocateOpen(true)}><Check /> Adjust Payment <ArrowRight className="ml-auto" /></Button>
         </section>
         <section className="flex min-w-0 flex-col rounded-lg border border-border bg-card p-5">
           <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-md bg-secondary text-secondary-foreground"><ArrowRightLeft className="h-5 w-5" /></div>
           <h2 className="text-base font-extrabold">TRANSFER PAYMENT</h2>
           <p className="mt-1 text-sm text-muted-foreground">Ek bill se payment doosre bill mein shift karein.</p>
-          <p className="mb-4 mt-3 border-l-2 border-primary/30 pl-3 text-xs leading-relaxed text-muted-foreground">Example: Bill A mein se ₹400 Bill B mein transfer karein. Total collection same rahega.</p>
           <Button variant="outline" className="mt-auto h-11 w-full" onClick={() => setTransferOpen(true)}><ArrowRightLeft /> Transfer Payment <ArrowRight className="ml-auto" /></Button>
         </section>
       </div>
@@ -334,7 +332,6 @@ export function OwnerPaymentTools() {
               <div className="flex gap-2"><Button type="submit" className="h-11 flex-1" disabled={busy}>{updateAllocation.isPending ? "Saving…" : "Save adjustment"}</Button><Button type="button" variant="outline" className="h-11" disabled={busy} onClick={() => setEditingAllocation(null)}>Cancel</Button></div>
             </form>}
           </details>}
-          <p className="border-t pt-3 text-xs leading-relaxed text-muted-foreground">Example: ₹1,000 mein se ₹600 Bill A mein adjust karein. ₹400 baaki rahega.</p>
         </DialogContent>
       </Dialog>
 
@@ -357,7 +354,6 @@ export function OwnerPaymentTools() {
             <div className="space-y-2"><Label htmlFor="transfer-amount">4. Enter Amount (₹)</Label><Input id="transfer-amount" type="number" inputMode="decimal" min="0.01" step="0.01" required placeholder="0.00" value={transferAmount} disabled={!transferTargetBillId || busy} onChange={e => { setTransferAmount(e.target.value); setTransferFeedback(null); }} className="h-12 text-base" /></div>
             <Button type="submit" className="h-12 w-full" disabled={!transferChosenPayment || !transferSourceId || !transferTargetBillId || !transferAmount || loading || !!loadError || busy}>{transferPayment.isPending ? <><Loader2 className="animate-spin" /> Transferring…</> : <><ArrowRightLeft /> Transfer Payment</>}</Button>
           </form>
-          <p className="border-t pt-3 text-xs leading-relaxed text-muted-foreground">Example: ₹400 Bill A se Bill B mein shift karein. Total collection same rahega.</p>
         </DialogContent>
       </Dialog>
 
