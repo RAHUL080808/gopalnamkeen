@@ -30,6 +30,7 @@ export type ShopForm = { name: string; contact_name: string; phone: string; addr
 function ShopsPage() {
   const [q, setQ] = useState("");
   const [sortBy, setSortBy] = useState(() => localStorage.getItem("shops-sort-by") || "overdue");
+  const [overdueFilter, setOverdueFilter] = useState("all");
   const [open, setOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const { data: me } = useMe();
@@ -61,20 +62,25 @@ function ShopsPage() {
     const term = q.trim().toLocaleLowerCase();
     const digits = term.replace(/\\D/g, "");
     const filtered = shops.filter((s) => {
-      if (!term) return true;
-      const searchable = [s.name, s.contact_name, s.phone, s.address]
-        .filter(Boolean)
-        .join(" ")
-        .toLocaleLowerCase();
-      const phoneDigits = String(s.phone ?? "").replace(/\\D/g, "");
-      return searchable.includes(term) || (digits.length >= 2 && phoneDigits.includes(digits));
+      const matchesSearch = !term || (() => {
+        const searchable = [s.name, s.contact_name, s.phone, s.address]
+          .filter(Boolean)
+          .join(" ")
+          .toLocaleLowerCase();
+        const phoneDigits = String(s.phone ?? "").replace(/\\D/g, "");
+        return searchable.includes(term) || (digits.length >= 2 && phoneDigits.includes(digits));
+      })();
+      const matchesOverdue = overdueFilter === "all"
+        || (overdueFilter === "1m" && s.oldestOverdueDays >= 30)
+        || (overdueFilter === "6m" && s.oldestOverdueDays >= 180);
+      return matchesSearch && matchesOverdue;
     });
     return [...filtered].sort((a, b) => {
       if (sortBy === "overdue") return b.oldestOverdueDays - a.oldestOverdueDays || b.due - a.due || a.name.localeCompare(b.name);
       if (sortBy === "amount") return b.due - a.due || a.name.localeCompare(b.name);
       return a.name.localeCompare(b.name);
     });
-  }, [shops, q, sortBy]);
+  }, [shops, q, sortBy, overdueFilter]);
 
   return (
     <div className="space-y-5">
@@ -95,6 +101,11 @@ function ShopsPage() {
             </Button>
           )}
         </div>
+        <select aria-label="Filter shops by overdue age" value={overdueFilter} onChange={(e) => setOverdueFilter(e.target.value)} className="h-12 rounded-2xl border border-border/70 bg-card px-3 text-sm font-semibold shadow-sm outline-none focus:border-primary sm:w-48">
+          <option value="all">All shops</option>
+          <option value="1m">1+ month overdue</option>
+          <option value="6m">6+ months overdue</option>
+        </select>
         <select aria-label="Sort shops" value={sortBy} onChange={(e) => { const value = e.target.value; setSortBy(value); localStorage.setItem("shops-sort-by", value); }} className="h-12 rounded-2xl border border-border/70 bg-card px-3 text-sm font-semibold shadow-sm outline-none focus:border-primary sm:w-52">
           <option value="overdue">Oldest overdue first</option>
           <option value="amount">Highest outstanding first</option>
@@ -103,7 +114,7 @@ function ShopsPage() {
       </div>
       <div className="space-y-2">
         <p className="px-1 text-xs text-muted-foreground">
-          {q.trim() ? `${list.length} matching shop${list.length === 1 ? "" : "s"}` : "Shops with the oldest unpaid bills appear first."}
+          {`${list.length} shop${list.length === 1 ? "" : "s"} shown${overdueFilter === "1m" ? " · 1+ month overdue" : overdueFilter === "6m" ? " · 6+ months overdue" : ""}` }
         </p>
       {list.length === 0 ? <Empty>{q.trim() ? "No matching shop found. Check the name or mobile number." : "No shops yet. Add your first shop."}</Empty> : (
         <div className="grid gap-2 sm:grid-cols-2">
