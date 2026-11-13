@@ -21,6 +21,7 @@ export function OwnerPaymentTools() {
   const [addOpen, setAddOpen] = useState(false);
   const [allocateOpen, setAllocateOpen] = useState(false);
   const [shopId, setShopId] = useState("");
+  const [shopSearch, setShopSearch] = useState("");
   const [billId, setBillId] = useState("advance");
   const [amount, setAmount] = useState("");
   const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 16));
@@ -57,6 +58,7 @@ export function OwnerPaymentTools() {
     },
   });
   const selectedShopBills = useMemo(() => bills.filter(b => b.shop_id === shopId && Number(b.balance) > 0), [bills, shopId]);
+  const filteredShops = useMemo(() => shops.filter(s => s.name.toLowerCase().includes(shopSearch.trim().toLowerCase())), [shops, shopSearch]);
 
   const addPayment = useMutation({
     mutationFn: async () => {
@@ -88,7 +90,7 @@ export function OwnerPaymentTools() {
     onSuccess: (savedReceipt) => {
       toast.success("Payment recorded");
       if (sendWhatsApp) setReceipt(savedReceipt);
-      setAddOpen(false); setShopId(""); setBillId("advance"); setAmount("");
+      setAddOpen(false); setShopId(""); setShopSearch(""); setBillId("advance"); setAmount("");
       setReference(""); setRemarks(""); setMode("cash"); setPaidAt(new Date().toISOString().slice(0, 16)); setSendWhatsApp(false);
       qc.invalidateQueries();
     },
@@ -157,9 +159,17 @@ export function OwnerPaymentTools() {
           <DialogHeader><DialogTitle>Record shop payment</DialogTitle></DialogHeader>
           <form className="space-y-3" onSubmit={e => { e.preventDefault(); addPayment.mutate(); }}>
             <div className="space-y-1.5"><Label>Shop</Label>
-              <Select value={shopId} onValueChange={v => { setShopId(v); setBillId("advance"); }}>
+              <Input
+                value={shopSearch}
+                onChange={e => { setShopSearch(e.target.value); setShopId(""); setBillId("advance"); }}
+                placeholder="Type shop name to search…"
+                autoComplete="off"
+              />
+              <Select value={shopId} onValueChange={v => { setShopId(v); setBillId("advance"); setShopSearch(shops.find(s => s.id === v)?.name ?? ""); }}>
                 <SelectTrigger><SelectValue placeholder="Choose shop" /></SelectTrigger>
-                <SelectContent>{shops.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {filteredShops.length ? filteredShops.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>) : <div className="px-2 py-3 text-sm text-muted-foreground">No matching shop found</div>}
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5"><Label>Payment for</Label>
