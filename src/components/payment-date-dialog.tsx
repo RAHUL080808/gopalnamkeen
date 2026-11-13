@@ -37,6 +37,7 @@ export function PaymentDateDialog({
       const month = Number(match[2]);
       const year = Number(match[3]);
       const [hours, minutes] = timeValue.split(":").map(Number);
+      if (hours === undefined || minutes === undefined) throw new Error("Valid date aur time enter karein");
       const localDate = new Date(year, month - 1, day, hours, minutes);
       if (
         localDate.getFullYear() !== year ||

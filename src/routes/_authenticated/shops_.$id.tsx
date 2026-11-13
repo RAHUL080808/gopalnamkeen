@@ -59,7 +59,7 @@ function ShopDetail() {
         supabase.from("shops").select("*").eq("id", id).maybeSingle(),
         supabase.from("bills").select("*").eq("shop_id", id).order("bill_date", { ascending: false }),
         (supabase.from("payments") as any).select("id, bill_id, amount, mode, paid_at, employee_name, is_void, reference, remarks, bills(bill_number), payment_allocations(amount, bills(bill_number))").eq("shop_id", id).order("paid_at", { ascending: false }),
-        (supabase.from("bill_amount_edit_history") as any).select("id,bill_id,old_amount,new_amount,edited_by,edited_at,bills(bill_number)").in("bill_id", (await supabase.from("bills").select("id").eq("shop_id", id)).data?.map((b) => b.id) ?? []).order("edited_at", { ascending: false }),
+        (supabase as any).from("bill_amount_edit_history").select("id,bill_id,old_amount,new_amount,edited_by,edited_at,bills(bill_number)").in("bill_id", (await supabase.from("bills").select("id").eq("shop_id", id)).data?.map((b) => b.id) ?? []).order("edited_at", { ascending: false }),
       ]);
       return { shop, bills: bills ?? [], pays: pays ?? [], amountEdits: amountEdits ?? [] };
     },

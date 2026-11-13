@@ -227,6 +227,7 @@ function OwnerDashboard() {
         .filter((x: any) => Number(x.balance) > 0)
         .map((x: any) => {
           const [y, m, d] = String(x.bill_date).split("-").map(Number);
+          if (y === undefined || m === undefined || d === undefined) return { ...x, age: NaN };
           const age = Math.floor((todayUtc - Date.UTC(y, m - 1, d)) / 86400000);
           return { ...x, age };
         })
