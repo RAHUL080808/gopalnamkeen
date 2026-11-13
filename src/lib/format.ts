@@ -4,16 +4,17 @@ export const inr = (n: number | string | null | undefined) =>
   );
 
 export const fmtDate = (d: string) =>
-  new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(d));
 
 export const fmtDateTime = (d: string) =>
-  new Date(d).toLocaleString("en-IN", {
+  new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
-    month: "short",
+    month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  });
+    hour12: true,
+  }).format(new Date(d));
 
 export const MODES = [
   { value: "cash", label: "Cash" },
