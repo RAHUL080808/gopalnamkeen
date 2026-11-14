@@ -154,7 +154,6 @@ export function BillPhotoDialog({ onClose, shopId }: { onClose: () => void; shop
               </div>
               <div className="space-y-1.5"><Label htmlFor="scan-date">Bill date *</Label><Input id="scan-date" type="date" required value={draft.billDate} onChange={event => update("billDate", event.target.value)} /></div>
               <div className="space-y-1.5"><Label htmlFor="scan-amount">Total amount (₹) *</Label><Input id="scan-amount" type="number" inputMode="decimal" step="0.01" min="0.01" required value={draft.amount} onChange={event => update("amount", event.target.value)} /></div>
-              <div className="space-y-1.5"><Label htmlFor="scan-number">Bill number (optional)</Label><Input id="scan-number" maxLength={100} value={draft.billNumber} onChange={event => update("billNumber", event.target.value)} placeholder="Automatic if left blank" /></div>
             </fieldset>
             {valid && duplicates.isFetching && <p role="status" className="text-xs text-muted-foreground">Checking existing bills…</p>}
             {valid && duplicates.isError && <Alert variant="destructive"><AlertTitle>Duplicate check failed</AlertTitle><AlertDescription>Existing bills could not be checked. <Button type="button" variant="link" size="sm" onClick={() => void duplicates.refetch()}>Retry check</Button></AlertDescription></Alert>}
