@@ -12,7 +12,8 @@ export const meQuery = queryOptions({
       supabase.from("user_roles").select("role").eq("user_id", u.user.id),
       supabase.from("profiles").select("full_name").eq("id", u.user.id).maybeSingle(),
     ]);
-    const role = (roles?.[0]?.role ?? null) as Role | null;
+    // A user can have more than one role row; owner must take precedence so owner-only tools are not hidden by row order.
+    const role = (roles?.find((entry) => entry.role === "owner")?.role ?? roles?.[0]?.role ?? null) as Role | null;
     return { id: u.user.id, email: u.user.email ?? "", name: profile?.full_name ?? "", role };
   },
   staleTime: 60_000,
