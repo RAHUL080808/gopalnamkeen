@@ -132,7 +132,7 @@ export function BillPhotoDialog({ onClose, shopId }: { onClose: () => void; shop
         aiError = error instanceof Error ? error.message : "AI scan was unavailable.";
         setProgress({ percent: 45, label: "AI unavailable. Trying on-device scanner…" });
         const result = await scanBillImage(nextFile, next => {
-          if (!controller.signal.aborted) setProgress(current => ({ ...next, percent: Math.max(current.percent, 45 + Math.round(next.percent * 0.55) }));
+          if (!controller.signal.aborted) setProgress(current => ({ ...next, percent: Math.max(current.percent, 45 + Math.round(next.percent * 0.55)) }));
         }, controller.signal);
         if (controller.signal.aborted) return;
         const extracted = extractBillFields(result.text);
