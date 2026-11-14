@@ -38,14 +38,27 @@ export const scanBillWithGemini = createServerFn({ method: "POST" })
       "Never guess missing values. Empty string is better than an incorrect value.",
     ].join("\n");
 
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: data.mimeType, data: data.imageBase64 } }] }],
-        generationConfig: { temperature: 0, responseMimeType: "application/json" },
-      }),
-    });
+    const requestModel = async (model: string) => fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: data.mimeType, data: data.imageBase64 } }] }],
+          generationConfig: { temperature: 0, responseMimeType: "application/json" },
+        }),
+      },
+    );
+
+    // If the primary model is temporarily overloaded, automatically try a second
+    // stable Flash model before falling back to on-device OCR in the UI.
+    let response = await requestModel("gemini-3.8-flash");
+    let usedFallbackModel = false;
+    if (response.status === 503) {
+      console.warn("[Gemini bill scan] Primary model is overloaded; trying gemini-3.6-flash.");
+      response = await requestModel("gemini-3.6-flash");
+      usedFallbackModel = true;
+    }
 
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
@@ -56,8 +69,8 @@ export const scanBillWithGemini = createServerFn({ method: "POST" })
         apiMessage = parsed.error?.message?.slice(0, 220) ?? parsed.error?.status ?? "";
       } catch { /* Do not expose an unstructured provider response. */ }
       throw new Error(response.status === 429
-        ? "Gemini quota or rate limit reached (HTTP 429). Check Google AI Studio usage and retry later."
-        : `Gemini API request failed (HTTP ${response.status})${apiMessage ? `: ${apiMessage}` : ""}. Check the server secret and Gemini API access.`);
+        ? `Gemini ${usedFallbackModel ? "backup model" : "API"} quota or rate limit reached (HTTP 429). Please retry later.`
+        : `Gemini ${usedFallbackModel ? "backup model" : "API"} request failed (HTTP ${response.status})${apiMessage ? `: ${apiMessage}` : ""}. Please retry or enter the details manually.`);
     }
 
     const payload = await response.json() as {
