@@ -38,7 +38,7 @@ export const scanBillWithGemini = createServerFn({ method: "POST" })
       "Never guess missing values. Empty string is better than an incorrect value.",
     ].join("\n");
 
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
       method: "POST",
       headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
@@ -50,9 +50,14 @@ export const scanBillWithGemini = createServerFn({ method: "POST" })
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
       console.error("[Gemini bill scan] Request failed:", response.status, detail.slice(0, 500));
+      let apiMessage = "";
+      try {
+        const parsed = JSON.parse(detail) as { error?: { message?: string; status?: string } };
+        apiMessage = parsed.error?.message?.slice(0, 220) ?? parsed.error?.status ?? "";
+      } catch { /* Do not expose an unstructured provider response. */ }
       throw new Error(response.status === 429
-        ? "Gemini is temporarily busy. Please retry in a moment."
-        : "Gemini could not read this bill. Please retry or enter the details manually.");
+        ? "Gemini quota or rate limit reached (HTTP 429). Check Google AI Studio usage and retry later."
+        : `Gemini API request failed (HTTP ${response.status})${apiMessage ? `: ${apiMessage}` : ""}. Check the server secret and Gemini API access.`);
     }
 
     const payload = await response.json() as {
