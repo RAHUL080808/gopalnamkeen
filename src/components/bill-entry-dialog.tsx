@@ -17,9 +17,9 @@ export function BillEntryDialog({ open, onOpenChange, shopId, driverMode = false
     onOpenChange(next);
   }
   // Every non-owner keeps the exact pre-existing manual behavior and permissions.
-  if (me?.role !== "owner" || mode === "manual") return <BillDialog open={open} onOpenChange={changeOpen} shopId={shopId} driverMode={driverMode} />;
+  if (me?.role !== "owner" || mode === "manual") return <BillDialog open={open} onOpenChange={changeOpen} {...(shopId ? { shopId } : {})} driverMode={driverMode} />;
   if (!open) return null;
-  if (mode === "photo") return <BillPhotoDialog shopId={shopId} onClose={() => changeOpen(false)} />;
+  if (mode === "photo") return <BillPhotoDialog {...(shopId ? { shopId } : {})} onClose={() => changeOpen(false)} />;
   return <Dialog open={open} onOpenChange={changeOpen}>
     <DialogContent className="max-w-sm" aria-describedby={undefined}>
       <DialogHeader><DialogTitle>Add bill</DialogTitle></DialogHeader>
