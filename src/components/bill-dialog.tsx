@@ -16,6 +16,7 @@ export function BillDialog({ open, onOpenChange, shopId, bill, driverMode = fals
   const today = new Date().toLocaleDateString("en-CA");
   const [shop, setShop] = useState(bill?.shop_id ?? shopId ?? "");
   const [shopSearch, setShopSearch] = useState("");
+  const [shopListOpen, setShopListOpen] = useState(false);
   const [date, setDate] = useState(bill?.bill_date ?? today);
   const [amount, setAmount] = useState(bill ? String(bill.amount) : "");
   const [notes, setNotes] = useState(bill?.notes ?? "");
@@ -68,18 +69,43 @@ export function BillDialog({ open, onOpenChange, shopId, bill, driverMode = fals
           {!shopId && !bill && (
             <div className="space-y-1.5">
               <Label>Shop</Label>
-              <Input
-                type="search"
-                placeholder="Type shop name to search..."
-                value={shopSearch}
-                onChange={(e) => setShopSearch(e.target.value)}
-                aria-label="Search shops"
-              />
-              <select required className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={shop} onChange={(e) => setShop(e.target.value)}>
-                <option value="">Select shop ({filteredShops.length} found)</option>
-                {filteredShops.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-              {shopSearch && filteredShops.length === 0 && <p className="text-xs text-muted-foreground">No shops found. Check the spelling or clear the search.</p>}
+              <div className="relative">
+                <Input
+                  required
+                  autoComplete="off"
+                  placeholder="Search and select shop..."
+                  value={shopSearch}
+                  onFocus={() => setShopListOpen(true)}
+                  onChange={(e) => {
+                    setShopSearch(e.target.value);
+                    setShop("");
+                    setShopListOpen(true);
+                  }}
+                  aria-label="Search and select shop"
+                  aria-expanded={shopListOpen}
+                />
+                {shopListOpen && (
+                  <div className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                    {filteredShops.length > 0 ? filteredShops.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className="w-full rounded-sm px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setShop(s.id);
+                          setShopSearch(s.name);
+                          setShopListOpen(false);
+                        }}
+                      >
+                        {s.name}
+                      </button>
+                    )) : (
+                      <p className="px-3 py-2 text-sm text-muted-foreground">No shops found</p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
           <div className="space-y-1.5"><Label>Bill date</Label><Input type="date" required value={date} onChange={(e) => setDate(e.target.value)} /></div>
