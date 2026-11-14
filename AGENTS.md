@@ -33,3 +33,4 @@ use the editor.
 - Keep canonical import shop fields synchronized with legacy name/contact_name/phone fields using the database trigger so existing shop forms and dashboards remain compatible.
 - Content route metadata uses shared pageMeta for complete per-page social and description tags without affecting authentication or page behavior.
 - Owner payment adjustment and transfer use independent UI state and confirmation screens while retaining existing payment mutations; this prevents one operation's selections from affecting the other.
+- Photo bill entry is a separate owner-only wrapper around unchanged manual BillDialog; lazy browser-only OCR uses same-origin locked worker/core/language assets, transient image previews and explicit confirmation through the existing RLS-bound bills insert, so scanning cannot alter manual creation or payment calculations.

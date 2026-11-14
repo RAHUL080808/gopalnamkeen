@@ -7,6 +7,7 @@ import { inr, fmtDate } from "@/lib/format";
 import { Card, Empty, StatusBadge } from "@/components/bits";
 import { Button } from "@/components/ui/button";
 import { BillDialog, DeleteBillButton } from "@/components/bill-dialog";
+import { BillEntryDialog } from "@/components/bill-entry-dialog";
 import { useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { pageMeta } from "@/lib/page-meta";
@@ -92,7 +93,7 @@ function BillsPage() {
           ))}
         </div>
       )}
-      <BillDialog open={open} onOpenChange={setOpen} />
+      <BillEntryDialog open={open} onOpenChange={setOpen} />
       {edit && <BillDialog key={edit.id} open onOpenChange={(o) => !o && setEdit(null)} bill={edit} />}
     </div>
   );
