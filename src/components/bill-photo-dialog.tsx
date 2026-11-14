@@ -18,6 +18,16 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PaymentToolPicker } from "@/components/payment-tool-picker";
 
+function withScanTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  });
+}
+
 async function prepareGeminiImage(file: File) {
   const bitmap = await createImageBitmap(file);
   try {
@@ -114,11 +124,15 @@ export function BillPhotoDialog({ onClose, shopId }: { onClose: () => void; shop
         const prepared = await prepareGeminiImage(nextFile);
         if (controller.signal.aborted) return;
         setProgress({ percent: 35, label: "Gemini AI is reading shop, date and total…" });
-        const extracted = await scanBillWithGemini({
-          data: {
-            ...prepared,
-          },
-        });
+        const extracted = await withScanTimeout(
+          scanBillWithGemini({
+            data: {
+              ...prepared,
+            },
+          }),
+          12_000,
+          "AI scan took too long. Switching to the backup scanner.",
+        );
         if (controller.signal.aborted) return;
         setProgress({ percent: 100, label: "AI scan complete" });
         setShopName(extracted.shopName);
