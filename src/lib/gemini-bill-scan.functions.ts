@@ -5,7 +5,6 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const requestSchema = z.object({
   mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
   imageBase64: z.string().min(100).max(8_000_000),
-  shopNames: z.array(z.string().trim().min(1).max(160)).max(3000),
 });
 
 const resultSchema = z.object({
@@ -28,14 +27,11 @@ export const scanBillWithGemini = createServerFn({ method: "POST" })
     if (!apiKey) throw new Error("Gemini API key is not configured in server secrets.");
 
     const prompt = [
-      "Read this Indian FMCG sales invoice carefully. Return ONLY a JSON object with exactly these keys: shopName, billDate, amount.",
-      "shopName: identify the CUSTOMER / BUYER / BILL TO / PARTY name, not the supplier or company printing the invoice. Use the closest exact spelling visible. If unclear, return an empty string.",
-      "billDate: use the actual invoice/bill date, not order date, due date, dispatch date, or printed/generated timestamp. Return YYYY-MM-DD. If unclear, return an empty string.",
-      "amount: use the final payable invoice total (Grand Total / Net Payable / Amount Payable). Do not use subtotal, taxable value, tax total, item total, quantity, or balance due. Return digits with optional decimal point, no currency symbol or commas. If unclear, return an empty string.",
-      "Do NOT extract or return any bill number, invoice number, GST number, phone number, or address.",
-      "The customer may be one of these existing shop names; use them as spelling hints only, and do not force a match if the printed customer is different:",
-      data.shopNames.slice(0, 1500).join(" | "),
-      "Never guess missing values. Empty string is better than an incorrect value.",
+      "Read this Indian FMCG sales invoice. Return ONLY JSON with exactly: shopName, billDate, amount.",
+      "shopName: exact CUSTOMER / BUYER / BILL TO / PARTY name; never the supplier. If unclear, use empty string.",
+      "billDate: actual invoice date in YYYY-MM-DD, not due, dispatch, or order date. If unclear, use empty string.",
+      "amount: final payable total (Grand Total / Net Payable), not subtotal, tax, or balance due. Digits with optional decimal, no currency symbol. If unclear, use empty string.",
+      "Never return bill/invoice number, GST number, phone, or address. Never guess; use empty strings for unclear fields.",
     ].join("\n");
 
     const requestModel = async (model: string) => fetch(
