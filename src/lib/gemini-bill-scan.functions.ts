@@ -41,17 +41,17 @@ export const scanBillWithGemini = createServerFn({ method: "POST" })
         headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: data.mimeType, data: data.imageBase64 } }] }],
-          generationConfig: { temperature: 0, responseMimeType: "application/json" },
+          generationConfig: { temperature: 0, responseMimeType: "application/json", maxOutputTokens: 128 },
         }),
       },
     );
 
     // If the primary model is temporarily overloaded, automatically try a second
     // stable Flash model before falling back to on-device OCR in the UI.
-    let response = await requestModel("gemini-3.8-flash");
+    let response = await requestModel("gemini-3.5-flash-lite");
     let usedFallbackModel = false;
     if (response.status === 503) {
-      console.warn("[Gemini bill scan] Primary model is overloaded; trying gemini-3.6-flash.");
+      console.warn("[Gemini bill scan] Fast primary model is overloaded; trying gemini-3.6-flash.");
       response = await requestModel("gemini-3.6-flash");
       usedFallbackModel = true;
     }
