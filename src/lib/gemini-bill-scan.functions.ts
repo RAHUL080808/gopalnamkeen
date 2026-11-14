@@ -11,7 +11,7 @@ const requestSchema = z.object({
 const resultSchema = z.object({
   shopName: z.string().max(200).default(""),
   billDate: z.string().max(10).default(""),
-  amount: z.string().max(30).default(""),
+  amount: z.union([z.string(), z.number()]).transform(value => String(value)).default(""),
 });
 
 export const scanBillWithGemini = createServerFn({ method: "POST" })
@@ -68,9 +68,9 @@ export const scanBillWithGemini = createServerFn({ method: "POST" })
       Number.isFinite(Date.parse(result.billDate)) &&
       new Date(result.billDate + "T00:00:00Z").toISOString().slice(0, 10) === result.billDate
       ? result.billDate : "";
-    const amount = /^\d+(?:\.\d{1,2})?$/.test(result.amount.trim().replace(/,/g, "")) &&
-      Number(result.amount.replace(/,/g, "")) > 0
-      ? result.amount.replace(/,/g, "") : "";
+    const normalizedAmount = result.amount.trim().replace(/,/g, "");
+    const amount = /^\d+(?:\.\d{1,2})?$/.test(normalizedAmount) && Number(normalizedAmount) > 0
+      ? normalizedAmount : "";
 
     return { shopName: result.shopName.trim(), billDate: date, amount, billNumber: "" };
   });
