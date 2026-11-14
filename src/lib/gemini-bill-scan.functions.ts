@@ -68,7 +68,7 @@ export const scanBillWithGemini = createServerFn({ method: "POST" })
       Number.isFinite(Date.parse(result.billDate)) &&
       new Date(result.billDate + "T00:00:00Z").toISOString().slice(0, 10) === result.billDate
       ? result.billDate : "";
-    const amount = /^\d+(?:\.\d{1,2})?$/.test(result.amount.replace(/,/g, "")) &&
+    const amount = /^\d+(?:\.\d{1,2})?$/.test(result.amount.trim().replace(/,/g, "")) &&
       Number(result.amount.replace(/,/g, "")) > 0
       ? result.amount.replace(/,/g, "") : "";
 
