@@ -1,4 +1,7 @@
 # Shop Excel import
+# Owner bill photo scanner
+- [ ] Add private browser OCR, editable confirmation, existing-shop matching and duplicate warnings while preserving manual bill entry.
+- [ ] Verify owner-only photo access, unchanged manual entry, OCR and confirmation saving on desktop/mobile.
 # Payments page runtime error
 - [x] Fix state initialization order and verify signed-in Payments and adjustment search; add regression coverage and clear existing compilation errors.
 # Owner Payment Tools simplicity
