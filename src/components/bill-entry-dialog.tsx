@@ -10,12 +10,14 @@ import { BillPhotoDialog } from "@/components/bill-photo-dialog";
 export function BillEntryDialog({ open, onOpenChange, shopId, driverMode = false }: {
   open: boolean; onOpenChange: (open: boolean) => void; shopId?: string; driverMode?: boolean;
 }) {
-  const { data: me } = useMe();
+  const { data: me, isLoading } = useMe();
   const [mode, setMode] = useState<"choose" | "photo" | "manual">("choose");
   function changeOpen(next: boolean) {
     if (!next) setMode("choose");
     onOpenChange(next);
   }
+  // Wait for role resolution before choosing the entry flow; otherwise an owner can briefly fall through to manual mode.
+  if (isLoading) return null;
   // Every non-owner keeps the exact pre-existing manual behavior and permissions.
   if (me?.role !== "owner" || mode === "manual") return <BillDialog open={open} onOpenChange={changeOpen} {...(shopId ? { shopId } : {})} driverMode={driverMode} />;
   if (!open) return null;
