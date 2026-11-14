@@ -12,7 +12,7 @@ import { inr, fmtDateTime, modeLabel } from "@/lib/format";
 import { Card, Empty } from "@/components/bits";
 import { CollectPayment } from "@/components/collect-payment";
 import { pageMeta } from "@/lib/page-meta";
-import { BillDialog } from "@/components/bill-dialog";
+import { BillEntryDialog } from "@/components/bill-entry-dialog";
 import { OrderScheduler } from "@/components/order-scheduler";
 
 export const Route = createFileRoute("/_authenticated/home")({
@@ -398,7 +398,7 @@ function OwnerDashboard() {
         </Card>
       </section>
       <p className="flex items-center justify-center gap-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70"><CalendarDays className="h-3.5 w-3.5" /> Business performance at a glance</p>
-      <BillDialog open={billDialogOpen} onOpenChange={setBillDialogOpen} />
+      <BillEntryDialog open={billDialogOpen} onOpenChange={setBillDialogOpen} />
     </div>
   );
 }

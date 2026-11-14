@@ -8,6 +8,7 @@ import { inr, fmtDate, fmtDateTime, modeLabel } from "@/lib/format";
 import { Card, Empty, Stat, StatusBadge } from "@/components/bits";
 import { Button } from "@/components/ui/button";
 import { BillDialog, DeleteBillButton } from "@/components/bill-dialog";
+import { BillEntryDialog } from "@/components/bill-entry-dialog";
 import { DriverBillAmountDialog } from "@/components/driver-bill-amount-dialog";
 import { PaymentDateDialog } from "@/components/payment-date-dialog";
 import { ShopDialog } from "./shops";
@@ -125,7 +126,7 @@ function ShopDetail() {
           ))}
         </div>
       )}
-      <BillDialog open={billOpen} onOpenChange={setBillOpen} shopId={id} driverMode={me?.role === "driver"} />
+      <BillEntryDialog open={billOpen} onOpenChange={setBillOpen} shopId={id} driverMode={me?.role === "driver"} />
       {editBill && <BillDialog key={editBill.id} open onOpenChange={(o) => !o && setEditBill(null)} bill={editBill} />}
       {driverEditBill && <DriverBillAmountDialog bill={driverEditBill} onClose={() => setDriverEditBill(null)} />}
       {paymentDateEdit && <PaymentDateDialog paymentId={paymentDateEdit.id} paidAt={paymentDateEdit.paid_at} onClose={() => setPaymentDateEdit(null)} />}
