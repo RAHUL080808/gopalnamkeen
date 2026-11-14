@@ -15,6 +15,7 @@ export function BillDialog({ open, onOpenChange, shopId, bill, driverMode = fals
   const qc = useQueryClient();
   const today = new Date().toLocaleDateString("en-CA");
   const [shop, setShop] = useState(bill?.shop_id ?? shopId ?? "");
+  const [shopSearch, setShopSearch] = useState("");
   const [date, setDate] = useState(bill?.bill_date ?? today);
   const [amount, setAmount] = useState(bill ? String(bill.amount) : "");
   const [notes, setNotes] = useState(bill?.notes ?? "");
@@ -24,6 +25,8 @@ export function BillDialog({ open, onOpenChange, shopId, bill, driverMode = fals
     enabled: open && !shopId && !bill,
     queryFn: async () => (await supabase.from("shops").select("id, name").order("name")).data ?? [],
   });
+
+  const filteredShops = shops.filter((s) => s.name.toLowerCase().includes(shopSearch.trim().toLowerCase()));
 
   const m = useMutation({
     mutationFn: async () => {
@@ -65,10 +68,18 @@ export function BillDialog({ open, onOpenChange, shopId, bill, driverMode = fals
           {!shopId && !bill && (
             <div className="space-y-1.5">
               <Label>Shop</Label>
+              <Input
+                type="search"
+                placeholder="Type shop name to search..."
+                value={shopSearch}
+                onChange={(e) => setShopSearch(e.target.value)}
+                aria-label="Search shops"
+              />
               <select required className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={shop} onChange={(e) => setShop(e.target.value)}>
-                <option value="">Select shop</option>
-                {shops.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                <option value="">Select shop ({filteredShops.length} found)</option>
+                {filteredShops.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
+              {shopSearch && filteredShops.length === 0 && <p className="text-xs text-muted-foreground">No shops found. Check the spelling or clear the search.</p>}
             </div>
           )}
           <div className="space-y-1.5"><Label>Bill date</Label><Input type="date" required value={date} onChange={(e) => setDate(e.target.value)} /></div>
