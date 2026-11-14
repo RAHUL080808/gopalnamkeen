@@ -117,7 +117,7 @@ export function BillPhotoDialog({ onClose, shopId }: { onClose: () => void; shop
         const extracted = await scanBillWithGemini({
           data: {
             ...prepared,
-            shopNames: (shops.data ?? []).map(shop => shop.name),
+            shopNames: (shops.data ?? []).slice(0, 1500).map(shop => shop.name),
           },
         });
         if (controller.signal.aborted) return;
