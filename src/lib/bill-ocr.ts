@@ -25,14 +25,13 @@ export async function scanBillImage(file: File, onProgress: (progress: OcrProgre
   const { default: Tesseract } = await import("tesseract.js/dist/tesseract.esm.min.js");
   if (signal.aborted) throw new DOMException("Scan cancelled", "AbortError");
   const base = new URL("/ocr", window.location.origin).href;
-  // Fetch language data ourselves so network failures and cancellation cannot leave
-  // Tesseract's internal language-initialization promise pending indefinitely.
+  // Preflight the same-origin language asset so network failures have a useful
+  // error before Tesseract's internal initialization; the worker reads it itself.
   onProgress({ percent: 10, label: "Loading on-device scanner…" });
-  let language: Uint8Array;
   try {
     const response = await fetch(`${base}/eng.traineddata.gz`, { signal });
     if (!response.ok) throw new Error("Scanner language download failed");
-    language = new Uint8Array(await response.arrayBuffer());
+    const language = new Uint8Array(await response.arrayBuffer());
     if (!language.length) throw new Error("Scanner language file is empty");
   } catch (error) {
     if (signal.aborted) throw new DOMException("Scan cancelled", "AbortError");
@@ -46,7 +45,7 @@ export async function scanBillImage(file: File, onProgress: (progress: OcrProgre
   const abort = () => { stopWorker?.(); rejectAbort?.(new DOMException("Scan cancelled", "AbortError")); };
   signal.addEventListener("abort", abort, { once: true });
   const task = (async () => {
-    const worker = await Tesseract.createWorker([{ code: "eng", data: language }], 1, {
+    const worker = await Tesseract.createWorker("eng", 1, {
       workerPath: `${base}/worker.min.js`, corePath: base, langPath: base,
       workerBlobURL: false, cacheMethod: "none", gzip: true,
       logger: message => {
