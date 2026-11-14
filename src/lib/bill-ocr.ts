@@ -25,13 +25,28 @@ export async function scanBillImage(file: File, onProgress: (progress: OcrProgre
   const { default: Tesseract } = await import("tesseract.js/dist/tesseract.esm.min.js");
   if (signal.aborted) throw new DOMException("Scan cancelled", "AbortError");
   const base = new URL("/ocr", window.location.origin).href;
+  // Fetch language data ourselves so network failures and cancellation cannot leave
+  // Tesseract's internal language-initialization promise pending indefinitely.
+  onProgress({ percent: 10, label: "Loading on-device scanner…" });
+  let language: Uint8Array;
+  try {
+    const response = await fetch(`${base}/eng.traineddata.gz`, { signal });
+    if (!response.ok) throw new Error("Scanner language download failed");
+    language = new Uint8Array(await response.arrayBuffer());
+    if (!language.length) throw new Error("Scanner language file is empty");
+  } catch (error) {
+    if (signal.aborted) throw new DOMException("Scan cancelled", "AbortError");
+    throw new Error("Could not load the on-device scanner. Check your connection and retry. Your photo has not been uploaded.", { cause: error });
+  }
   let stopWorker: (() => void) | undefined;
   let rejectAbort: ((reason: unknown) => void) | undefined;
+  let rejectWorkerError: ((reason: unknown) => void) | undefined;
   const aborted = new Promise<never>((_, reject) => { rejectAbort = reject; });
+  const workerFailed = new Promise<never>((_, reject) => { rejectWorkerError = reject; });
   const abort = () => { stopWorker?.(); rejectAbort?.(new DOMException("Scan cancelled", "AbortError")); };
   signal.addEventListener("abort", abort, { once: true });
   const task = (async () => {
-    const worker = await Tesseract.createWorker("eng", 1, {
+    const worker = await Tesseract.createWorker([{ code: "eng", data: language }], 1, {
       workerPath: `${base}/worker.min.js`, corePath: base, langPath: base,
       workerBlobURL: false, cacheMethod: "none", gzip: true,
       logger: message => {
@@ -40,7 +55,7 @@ export async function scanBillImage(file: File, onProgress: (progress: OcrProgre
         const percent = reading ? 35 + Math.round(message.progress * 64) : message.status === "loading language traineddata" ? 15 + Math.round(message.progress * 15) : 8;
         onProgress({ percent, label: reading ? "Reading bill…" : "Loading on-device scanner…" });
       },
-      errorHandler: () => { /* errors reject the operation; don't log bill data */ },
+      errorHandler: () => { rejectWorkerError?.(new Error("The on-device scanner stopped. Retry or choose another photo.")); },
     });
     stopWorker = () => { void worker.terminate(); };
     try {
@@ -50,6 +65,6 @@ export async function scanBillImage(file: File, onProgress: (progress: OcrProgre
       return { text: data.text, confidence: data.confidence };
     } finally { await worker.terminate(); }
   })();
-  try { return await Promise.race([task, aborted]); }
-  finally { signal.removeEventListener("abort", abort); }
+  try { return await Promise.race([task, aborted, workerFailed]); }
+  finally { signal.removeEventListener("abort", abort); stopWorker?.(); }
 }

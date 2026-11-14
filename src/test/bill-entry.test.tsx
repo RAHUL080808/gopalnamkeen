@@ -57,6 +57,13 @@ describe("Unchanged manual entry", () => {
 });
 
 describe("Photo confirmation", () => {
+  it("does not select or create a shop automatically after OCR", async () => {
+    setup(); fireEvent.click(screen.getByRole("button", { name: "Photo" }));
+    fireEvent.change(screen.getByLabelText("Upload bill photo"), { target: { files: [new File(["image"], "bill.jpg", { type: "image/jpeg" })] } });
+    await waitFor(() => expect(screen.getByLabelText("Total amount (₹) *")).toHaveValue(600));
+    expect(screen.getByRole("combobox", { name: "Shop" })).toHaveValue("");
+    expect(mocks.insert).not.toHaveBeenCalled(); expect(mocks.save).not.toHaveBeenCalled();
+  });
   it("does not save on OCR or shop selection, and saves corrected details only after confirmation", async () => {
     setup(); fireEvent.click(screen.getByRole("button", { name: "Photo" }));
     fireEvent.change(screen.getByLabelText("Upload bill photo"), { target: { files: [new File(["image"], "bill.jpg", { type: "image/jpeg" })] } });
@@ -81,5 +88,18 @@ describe("Photo confirmation", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Confirm & Save" })).toBeDisabled());
     await waitFor(() => expect(mocks.duplicate).toHaveBeenCalled());
     expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.insert).not.toHaveBeenCalled();
+  });
+  it("does not retry a failed save automatically or discard corrected input", async () => {
+    mocks.save.mockRejectedValue(new Error("Bill could not be saved"));
+    setup(); fireEvent.click(screen.getByRole("button", { name: "Photo" }));
+    fireEvent.change(screen.getByLabelText("Upload bill photo"), { target: { files: [new File(["image"], "bill.jpg", { type: "image/jpeg" })] } });
+    await waitFor(() => expect(screen.getByLabelText("Total amount (₹) *")).toHaveValue(600));
+    fireEvent.change(screen.getByRole("combobox", { name: "Shop" }), { target: { value: "shop-1" } });
+    const confirm = screen.getByRole("button", { name: "Confirm & Save" });
+    await waitFor(() => expect(confirm).toBeEnabled());
+    fireEvent.click(confirm);
+    await waitFor(() => expect(confirm).toBeEnabled());
+    expect(mocks.save).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText("Total amount (₹) *")).toHaveValue(600);
   });
 });
