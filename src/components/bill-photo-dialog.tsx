@@ -21,7 +21,7 @@ import { PaymentToolPicker } from "@/components/payment-tool-picker";
 async function prepareGeminiImage(file: File) {
   const bitmap = await createImageBitmap(file);
   try {
-    const scale = Math.min(1, 1800 / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(bitmap.width * scale));
     canvas.height = Math.max(1, Math.round(bitmap.height * scale));
@@ -29,7 +29,7 @@ async function prepareGeminiImage(file: File) {
     if (!context) throw new Error("Photo processing is unavailable on this device.");
     context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(value => value ? resolve(value) : reject(new Error("Could not prepare the bill photo.")), "image/jpeg", 0.82);
+      canvas.toBlob(value => value ? resolve(value) : reject(new Error("Could not prepare the bill photo.")), "image/jpeg", 0.76);
     });
     const bytes = new Uint8Array(await blob.arrayBuffer());
     let binary = "";
@@ -117,7 +117,6 @@ export function BillPhotoDialog({ onClose, shopId }: { onClose: () => void; shop
         const extracted = await scanBillWithGemini({
           data: {
             ...prepared,
-            shopNames: (shops.data ?? []).slice(0, 1500).map(shop => shop.name),
           },
         });
         if (controller.signal.aborted) return;
