@@ -63,33 +63,54 @@ function amountFromLine(line: string) {
 }
 
 export function extractBillFields(text: string): ExtractedBill {
-  const lines = text.split(/\r?\n/).map(line => line.replace(/[|]/g, "I").replace(/\s+/g, " ").trim()).filter(Boolean);
-  const shopLabel = /^(?:shop(?:\s*name)?|customer(?:\s*name)?|party(?:\s*name)?|bill\s*to|sold\s*to|ship\s*to|buyer|retailer|consignee|m\s*[/\.]?\s*s\.?|name)\s*[:.\-]?\s*/i;
-  const shopIndex = lines.findIndex(line => shopLabel.test(line));
-  const shopLine = shopIndex >= 0 ? lines[shopIndex] ?? "" : "";
-  let shopName = shopLine.replace(shopLabel, "").trim();
-  if (shopIndex >= 0 && !shopName) shopName = lines[shopIndex + 1] ?? "";
-  shopName = shopName.split(/\s+(?:date|bill\s*(?:no|number)|invoice\s*(?:no|number))\b/i)[0]?.trim() ?? "";
+  const clean = text.replace(/\r/g, "\n").replace(/[|]/g, "I");
+  const lines = clean.split(/\n/).map(line => line.replace(/\s+/g, " ").trim()).filter(Boolean);
+  const normalized = clean.replace(/\s+/g, " ");
 
-  const labelledDate = lines.find(line => /(?:bill\s*date|invoice\s*date|dated|date)\b/i.test(line) && !/due\s*date/i.test(line));
-  const billDate = parseDate(labelledDate ?? text);
+  // This business invoice prints the customer immediately below "Bill To/Ship To Party Details".
+  const partyHeading = lines.findIndex(line => /bill\s*to\s*\/?\s*ship\s*to\s*party\s*details|bill\s*to\s*party\s*details|party\s*details/i.test(line));
+  let shopName = "";
+  if (partyHeading >= 0) {
+    const sameLine = (lines[partyHeading] ?? "").replace(/.*?(?:bill\s*to\s*\/?\s*ship\s*to\s*party\s*details|bill\s*to\s*party\s*details|party\s*details)\s*/i, "").trim();
+    const candidate = sameLine || lines.slice(partyHeading + 1, partyHeading + 4).find(line =>
+      !/(?:order\s*no|invoice\s*(?:no|date)|date\s*&\s*time|gst\s*no|fssai|place\s*of\s*supply)/i.test(line)
+    ) || "";
+    shopName = candidate.replace(/\s+(?:order\s*no|invoice\s*(?:no|date)|date\s*&\s*time)\b.*$/i, "").trim();
+  }
+  if (!shopName) {
+    const labelled = lines.find(line => /^(?:bill\s*to|sold\s*to|ship\s*to|customer|party)\b/i.test(line));
+    shopName = labelled?.replace(/^(?:bill\s*to|sold\s*to|ship\s*to|customer|party)(?:\s*\/\s*ship\s*to)?(?:\s*party\s*details)?\s*[:.\-]?\s*/i, "").trim() ?? "";
+  }
+  // Remove address and metadata if OCR combines multiple printed rows.
+  shopName = shopName.split(/\s+(?:rastipura|indira\s*colony|order\s*no|invoice\s*(?:no|date)|gst\s*no|fssai\s*no)\b/i)[0]?.trim() ?? "";
 
-  const numberMatch = text.match(/\b(?:bill|invoice|inv)\s*(?:no\.?|number|#)\s*[:#.\-]?\s*([A-Z0-9][A-Z0-9/_.-]*)/i);
-  const billNumber = numberMatch?.[1] ?? "";
+  // Prefer the explicit Invoice Date. Ignore Order Date/Time and the later "Invoice generated on" footer.
+  const invoiceDateLine = lines.find(line => /invoice\s*date/i.test(line));
+  const labelledDateLine = invoiceDateLine ?? lines.find(line => /\bbill\s*date\b|\bdated\b/i.test(line));
+  const dateSource = labelledDateLine ?? "";
+  const dateMatch = dateSource.match(/(?:invoice\s*date|bill\s*date|dated)\s*[:.]?\s*(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}|\d{4}[\/.-]\d{1,2}[\/.-]\d{1,2})/i);
+  const billDate = parseDate(dateMatch?.[1] ?? dateSource);
 
-  const candidates = lines.map((line, index) => {
-    const label = line.match(/\b(grand\s*total|net\s*(?:amount|total|payable)|total\s*(?:bill\s*)?(?:amount|payable)?|amount\s*(?:payable|due)|bill\s*amount|invoice\s*value)\b\s*[:=\-]?/i);
-    if (!label || /\b(?:sub\s*total|subtotal|total\s*(?:qty|quantity|items|tax)|tax\s*total|paid|received|balance|change|discount)\b/i.test(line)) return null;
-    const tail = line.slice((label.index ?? 0) + label[0].length).trim() || lines[index + 1] || "";
-    const value = amountFromLine(tail);
-    if (!value) return null;
-    const key = (label[1] ?? "").toLowerCase();
-    const score = /grand|net|payable/i.test(key) ? 6 : /invoice\s*value|bill\s*amount|total\s*amount/i.test(key) ? 5 : /total/i.test(key) ? 4 : 3;
-    return { value, score, index };
-  }).filter((item): item is { value: string; score: number; index: number } => item !== null).sort((a, b) => b.score - a.score || b.index - a.index);
-  return { shopName, billDate, amount: candidates[0]?.value ?? "", billNumber };
+  // This workflow intentionally does not read or save the invoice/bill number.
+  const billNumber = "";
+
+  // Prefer the printed Grand Total row, not item totals, taxable amount, GST, or Round Off.
+  const grandLine = lines.find(line => /\bgrand\s*total\b/i.test(line));
+  let amount = "";
+  if (grandLine) {
+    const tail = grandLine.slice((grandLine.match(/\bgrand\s*total\b/i)?.index ?? 0) + (grandLine.match(/\bgrand\s*total\b/i)?.[0].length ?? 0));
+    amount = amountFromLine(tail);
+    if (!amount) {
+      const afterGrand = grandLine.match(/\bgrand\s*total\b\s*[:=]?\s*(?:rs\.?|inr|₹)?\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i);
+      amount = afterGrand?.[1]?.replace(/,/g, "") ?? "";
+    }
+  }
+  if (!amount) {
+    const totalLine = lines.find(line => /\b(?:net\s*amount|net\s*payable|total\s*invoice\s*amount)\b/i.test(line));
+    if (totalLine) amount = amountFromLine(totalLine);
+  }
+  return { shopName, billDate, amount, billNumber };
 }
-
 export function validateScannedBill(draft: ScannedBillDraft) {
   if (!draft.shopId) throw new Error("Select an existing shop.");
   if (!validBillDate(draft.billDate)) throw new Error("Enter a valid bill date.");
