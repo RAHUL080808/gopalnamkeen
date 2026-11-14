@@ -22,7 +22,7 @@ export async function scanBillImage(file: File, onProgress: (progress: OcrProgre
   if (!blob) throw new Error("Could not read this photo. Choose another image.");
   if (signal.aborted) throw new DOMException("Scan cancelled", "AbortError");
   // Browser distribution only: no Node modules in the SSR graph, no remote CDN defaults.
-  const { createWorker } = await import("tesseract.js/dist/tesseract.esm.min.js");
+  const { default: Tesseract } = await import("tesseract.js/dist/tesseract.esm.min.js");
   if (signal.aborted) throw new DOMException("Scan cancelled", "AbortError");
   const base = new URL("/ocr", window.location.origin).href;
   let stopWorker: (() => void) | undefined;
@@ -31,7 +31,7 @@ export async function scanBillImage(file: File, onProgress: (progress: OcrProgre
   const abort = () => { stopWorker?.(); rejectAbort?.(new DOMException("Scan cancelled", "AbortError")); };
   signal.addEventListener("abort", abort, { once: true });
   const task = (async () => {
-    const worker = await createWorker("eng", 1, {
+    const worker = await Tesseract.createWorker("eng", 1, {
       workerPath: `${base}/worker.min.js`, corePath: base, langPath: base,
       workerBlobURL: false, cacheMethod: "none", gzip: true,
       logger: message => {
