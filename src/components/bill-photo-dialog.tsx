@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMe } from "@/lib/session";
 import { extractBillFields, suggestShops, validateBillImage, validateScannedBill, type ScannedBillDraft } from "@/lib/bill-scan";
 import { scanBillImage, type OcrProgress } from "@/lib/bill-ocr";
+import { scanBillWithGemini } from "@/lib/gemini-bill-scan.functions";
 import { findScannedBillDuplicates, saveConfirmedScannedBill } from "@/lib/bill-scan-save";
 import { inr, fmtDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,29 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PaymentToolPicker } from "@/components/payment-tool-picker";
+
+async function prepareGeminiImage(file: File) {
+  const bitmap = await createImageBitmap(file);
+  try {
+    const scale = Math.min(1, 1800 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Photo processing is unavailable on this device.");
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(value => value ? resolve(value) : reject(new Error("Could not prepare the bill photo.")), "image/jpeg", 0.82);
+    });
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = "";
+    const chunkSize = 0x8000;
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+    }
+    return { mimeType: "image/jpeg" as const, imageBase64: btoa(binary) };
+  } finally { bitmap.close(); }
+}
 
 export function BillPhotoDialog({ onClose, shopId }: { onClose: () => void; shopId?: string }) {
   const { data: me } = useMe();
@@ -84,15 +108,41 @@ export function BillPhotoDialog({ onClose, shopId }: { onClose: () => void; shop
     setScanning(true); setScanError(""); setSaveError(""); setScanWarning("");
     setProgress({ percent: 0, label: "Preparing photo…" });
     try {
-      const result = await scanBillImage(nextFile, next => {
-        if (!controller.signal.aborted) setProgress(current => ({ ...next, percent: Math.max(current.percent, next.percent) }));
-      }, controller.signal);
-      if (controller.signal.aborted) return;
-      const extracted = extractBillFields(result.text);
-      setShopName(extracted.shopName);
-      setDraft({ shopId: shopId ?? "", billDate: extracted.billDate, amount: extracted.amount, billNumber: extracted.billNumber });
-      if (!result.text.trim()) setScanWarning("No readable text found. Choose a clearer photo or enter the details below.");
-      else if (result.confidence < 65 || !extracted.shopName || !extracted.billDate || !extracted.amount) setScanWarning("Some details could not be read clearly. Review and correct them before saving.");
+      setProgress({ percent: 8, label: "Preparing bill photo for AI…" });
+      let aiError = "";
+      try {
+        const prepared = await prepareGeminiImage(nextFile);
+        if (controller.signal.aborted) return;
+        setProgress({ percent: 35, label: "Gemini AI is reading shop, date and total…" });
+        const extracted = await scanBillWithGemini({
+          data: {
+            ...prepared,
+            shopNames: (shops.data ?? []).map(shop => shop.name),
+          },
+        });
+        if (controller.signal.aborted) return;
+        setProgress({ percent: 100, label: "AI scan complete" });
+        setShopName(extracted.shopName);
+        setDraft({ shopId: shopId ?? "", billDate: extracted.billDate, amount: extracted.amount, billNumber: "" });
+        if (!extracted.shopName || !extracted.billDate || !extracted.amount) {
+          setScanWarning("AI could not confidently read every field. Check and correct the details before saving.");
+        }
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        aiError = error instanceof Error ? error.message : "AI scan was unavailable.";
+        setProgress({ percent: 45, label: "AI unavailable. Trying on-device scanner…" });
+        const result = await scanBillImage(nextFile, next => {
+          if (!controller.signal.aborted) setProgress(current => ({ ...next, percent: Math.max(current.percent, 45 + Math.round(next.percent * 0.55) }));
+        }, controller.signal);
+        if (controller.signal.aborted) return;
+        const extracted = extractBillFields(result.text);
+        setShopName(extracted.shopName);
+        setDraft({ shopId: shopId ?? "", billDate: extracted.billDate, amount: extracted.amount, billNumber: "" });
+        setScanWarning(`AI scan unavailable (${aiError}). On-device scan was used; carefully verify every field.`);
+        if (!result.text.trim() || result.confidence < 65 || !extracted.shopName || !extracted.billDate || !extracted.amount) {
+          setScanWarning(`AI scan unavailable (${aiError}). The backup scanner may have missed details. Correct them manually before saving.`);
+        }
+      }
     } catch (error) {
       if (controller.signal.aborted) return;
       setScanError(error instanceof Error && /photo|image|device/i.test(error.message) ? error.message : "Could not read this photo. Retry, choose another image, or enter the details below.");
@@ -114,7 +164,7 @@ export function BillPhotoDialog({ onClose, shopId }: { onClose: () => void; shop
       <DialogContent className="max-h-[92dvh] max-w-3xl overflow-y-auto p-4 sm:p-6" aria-busy={scanning || save.isPending}>
         <DialogHeader className="pr-7">
           <DialogTitle>Photo bill</DialogTitle>
-          <DialogDescription className="flex items-center justify-center gap-1.5 text-xs sm:justify-start"><ShieldCheck className="h-3.5 w-3.5 shrink-0 text-accent-foreground" /> Photo stays on this device. Only confirmed details are saved.</DialogDescription>
+          <DialogDescription className="flex items-center justify-center gap-1.5 text-xs sm:justify-start"><ShieldCheck className="h-3.5 w-3.5 shrink-0 text-accent-foreground" /> Photo is sent securely to Gemini AI for reading. Only confirmed bill details are saved in Gopal.</DialogDescription>
         </DialogHeader>
         <input ref={cameraInput} type="file" accept="image/*" capture="environment" aria-label="Take bill photo" className="hidden" onChange={event => { chooseFile(event.target.files?.[0]); event.target.value = ""; }} />
         <input ref={galleryInput} type="file" accept="image/jpeg,image/png,image/webp,image/bmp" aria-label="Upload bill photo" className="hidden" onChange={event => { chooseFile(event.target.files?.[0]); event.target.value = ""; }} />
