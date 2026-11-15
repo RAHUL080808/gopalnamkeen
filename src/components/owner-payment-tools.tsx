@@ -65,7 +65,7 @@ export function OwnerPaymentTools() {
   const { data: bills = [], isPending: billsLoading, error: billsError } = useQuery({
     queryKey: ["owner-payment-bills"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("bills").select("id,bill_number,amount,balance,shop_id").order("bill_date", { ascending: true });
+      const { data, error } = await supabase.from("bills").select("id,bill_number,amount,balance,shop_id,is_returned").eq("is_returned", false).order("bill_date", { ascending: true });
       if (error) throw error;
       return (data ?? []) as Bill[];
     },
