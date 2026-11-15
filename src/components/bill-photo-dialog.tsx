@@ -98,7 +98,7 @@ export function BillPhotoDialog({ onClose, shopId }: { onClose: () => void; shop
   const save = useMutation({
     mutationFn: (confirmed: ScannedBillDraft) => saveConfirmedScannedBill(confirmed), retry: false,
     onSuccess: bill => {
-      toast.success(`Bill ${bill.bill_number} saved`);
+      toast.success(`Order No. ${bill.bill_number} saved`);
       void qc.invalidateQueries();
       onClose();
     },
@@ -136,8 +136,8 @@ export function BillPhotoDialog({ onClose, shopId }: { onClose: () => void; shop
         if (controller.signal.aborted) return;
         setProgress({ percent: 100, label: "AI scan complete" });
         setShopName(extracted.shopName);
-        setDraft({ shopId: shopId ?? "", billDate: extracted.billDate, amount: extracted.amount, billNumber: "" });
-        if (!extracted.shopName || !extracted.billDate || !extracted.amount) {
+        setDraft({ shopId: shopId ?? "", billDate: extracted.billDate, amount: extracted.amount, billNumber: extracted.billNumber });
+        if (!extracted.shopName || !extracted.billDate || !extracted.amount || !extracted.billNumber) {
           setScanWarning("AI could not confidently read every field. Check and correct the details before saving.");
         }
       } catch (error) {
@@ -150,9 +150,9 @@ export function BillPhotoDialog({ onClose, shopId }: { onClose: () => void; shop
         if (controller.signal.aborted) return;
         const extracted = extractBillFields(result.text);
         setShopName(extracted.shopName);
-        setDraft({ shopId: shopId ?? "", billDate: extracted.billDate, amount: extracted.amount, billNumber: "" });
+        setDraft({ shopId: shopId ?? "", billDate: extracted.billDate, amount: extracted.amount, billNumber: extracted.billNumber });
         setScanWarning(`AI scan unavailable (${aiError}). On-device scan was used; carefully verify every field.`);
-        if (!result.text.trim() || result.confidence < 65 || !extracted.shopName || !extracted.billDate || !extracted.amount) {
+        if (!result.text.trim() || result.confidence < 65 || !extracted.shopName || !extracted.billDate || !extracted.amount || !extracted.billNumber) {
           setScanWarning(`AI scan unavailable (${aiError}). The backup scanner may have missed details. Correct them manually before saving.`);
         }
       }
@@ -215,12 +215,13 @@ export function BillPhotoDialog({ onClose, shopId }: { onClose: () => void; shop
                 <PaymentToolPicker id="scan-shop" label="Shop" placeholder={shops.isPending ? "Loading shops…" : "Select existing shop"} searchPlaceholder="Search existing shops" value={draft.shopId} onChange={value => update("shopId", value)} disabled={shops.isPending || shops.isError || save.isPending} options={(shops.data ?? []).map(shop => ({ value: shop.id, label: shop.name, detail: [shop.area, shop.contact_name].filter(Boolean).join(" · ") }))} emptyText="No existing shops found." />
                 {shops.isError && <div role="alert" className="text-xs text-destructive">Could not load shops. <Button type="button" variant="link" size="sm" onClick={() => void shops.refetch()}>Retry</Button></div>}
               </div>
+              <div className="space-y-1.5"><Label htmlFor="scan-order-no">Order No. *</Label><Input id="scan-order-no" required maxLength={100} value={draft.billNumber} onChange={event => update("billNumber", event.target.value)} placeholder="Enter Order No. from bill" /></div>
               <div className="space-y-1.5"><Label htmlFor="scan-date">Bill date *</Label><Input id="scan-date" type="date" required value={draft.billDate} onChange={event => update("billDate", event.target.value)} /></div>
               <div className="space-y-1.5"><Label htmlFor="scan-amount">Total amount (₹) *</Label><Input id="scan-amount" type="number" inputMode="decimal" step="0.01" min="0.01" required value={draft.amount} onChange={event => update("amount", event.target.value)} /></div>
             </fieldset>
             {valid && duplicates.isFetching && <p role="status" className="text-xs text-muted-foreground">Checking existing bills…</p>}
             {valid && duplicates.isError && <Alert variant="destructive"><AlertTitle>Duplicate check failed</AlertTitle><AlertDescription>Existing bills could not be checked. <Button type="button" variant="link" size="sm" onClick={() => void duplicates.refetch()}>Retry check</Button></AlertDescription></Alert>}
-            {valid && Boolean(duplicates.data?.length) && <Alert className="border-warning/50 bg-warning/10 text-warning-foreground"><AlertTriangle className="h-4 w-4" /><AlertTitle>Possible duplicate — not saved</AlertTitle><AlertDescription><ul className="mt-1 space-y-1">{duplicates.data?.map(bill => <li key={bill.id} className="break-words">{bill.bill_number} · {fmtDate(bill.bill_date)} · {inr(bill.amount)}</li>)}</ul><Link to="/shops/$id" params={{ id: draft.shopId }} className="mt-2 inline-block font-semibold underline">View existing bills</Link></AlertDescription></Alert>}
+            {valid && Boolean(duplicates.data?.length) && <Alert className="border-warning/50 bg-warning/10 text-warning-foreground"><AlertTriangle className="h-4 w-4" /><AlertTitle>Possible duplicate — not saved</AlertTitle><AlertDescription><ul className="mt-1 space-y-1">{duplicates.data?.map(bill => <li key={bill.id} className="break-words">Order {bill.bill_number} · {fmtDate(bill.bill_date)} · {inr(bill.amount)}</li>)}</ul><Link to="/shops/$id" params={{ id: draft.shopId }} className="mt-2 inline-block font-semibold underline">View existing bills</Link></AlertDescription></Alert>}
             {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
             <Button type="submit" className="min-h-11 w-full" disabled={!valid || save.isPending || duplicates.isFetching || duplicates.isError || Boolean(duplicates.data?.length) || shops.isError || shops.isPending}>{save.isPending ? <><Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> Saving…</> : <><Check className="h-4 w-4" /> Confirm &amp; Save</>}</Button>
           </form>}
