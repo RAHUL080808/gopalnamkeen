@@ -78,8 +78,12 @@ function ShopsPage() {
         const paymentRisk = history.paid > 0 ? history.latePaid / history.paid * 60 : 0;
         const balanceRisk = totalAmount > 0 ? Math.min(1, Math.max(0, due / totalAmount)) * 20 : 0;
         const oldBillRisk = outstandingBills.length ? Math.min(1, Math.max(0, (oldestOverdueDays - 7) / 90)) * 20 : 0;
-        const riskScore = Math.min(100, Math.round(paymentRisk + balanceRisk + oldBillRisk));
-        const riskLevel = riskScore >= 61 ? "High" : riskScore >= 31 ? "Medium" : "Low";
+        const calculatedRisk = Math.round(paymentRisk + balanceRisk + oldBillRisk);
+        // Age of the oldest unpaid bill sets the minimum risk tier:
+        // 0-7 days Low, 8-30 days Risk, 31-89 days Medium, 90+ days High.
+        const agingFloor = oldestOverdueDays >= 90 ? 90 : oldestOverdueDays >= 31 ? 61 : oldestOverdueDays > 7 ? 31 : 0;
+        const riskScore = Math.min(100, Math.max(calculatedRisk, agingFloor));
+        const riskLevel = oldestOverdueDays >= 90 ? "High" : oldestOverdueDays >= 31 ? "Medium" : oldestOverdueDays > 7 ? "Risk" : "Low";
         return { ...shop, due, oldestOverdueDays, riskScore, riskLevel };
       });
     },
@@ -113,7 +117,7 @@ function ShopsPage() {
   return (
     <div className="space-y-5">
       <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#132443] via-[#20395f] to-[#315477] p-5 text-white shadow-xl shadow-slate-900/10 sm:p-7"><div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full border-[25px] border-white/[0.06]" /><div className="relative flex items-end justify-between gap-3"><div><div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/55">Customer directory</div><h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Shops</h1><p className="mt-1 text-xs text-white/65">Manage retailer profiles and keep track of pending balances.</p></div><Button className="shrink-0 rounded-xl bg-white text-slate-900 shadow-lg hover:bg-slate-100" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Add shop</Button></div><div className="relative mt-5 flex gap-5 border-t border-white/10 pt-4"><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Total shops</div><div className="mt-1 text-xl font-extrabold tabular">{shops.length}</div></div><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Total outstanding</div><div className="mt-1 text-xl font-extrabold tabular text-amber-200">{inr(shops.reduce((sum, s) => sum + s.due, 0))}</div></div></div></div>
-      {me?.role === "owner" && <div className="flex flex-wrap items-center gap-2"><div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-200">Customer risk · <strong>{shops.filter((s) => s.riskLevel === "High").length}</strong> high-risk shops · <strong>{shops.filter((s) => s.riskLevel === "Medium").length}</strong> medium-risk</div><Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="h-4 w-4" /> Import Excel</Button></div>}
+      {me?.role === "owner" && <div className="flex flex-wrap items-center gap-2"><div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-200">Customer risk · <strong>{shops.filter((s) => s.riskLevel === "High").length}</strong> high-risk shops · <strong>{shops.filter((s) => s.riskLevel === "Medium").length}</strong> medium-risk · <strong>{shops.filter((s) => s.riskLevel === "Risk").length}</strong> at risk</div><Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="h-4 w-4" /> Import Excel</Button></div>}
       <div className="flex flex-col gap-2 sm:flex-row">
         <div className="relative min-w-0 flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -134,7 +138,7 @@ function ShopsPage() {
           <option value="1m">1+ month overdue</option>
           <option value="6m">6+ months overdue</option>
         </select>
-        {me?.role === "owner" && <select aria-label="Filter shops by customer risk" value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)} className="h-12 rounded-2xl border border-border/70 bg-card px-3 text-sm font-semibold shadow-sm outline-none focus:border-primary sm:w-44"><option value="all">All risk levels</option><option value="high">High risk</option><option value="medium">Medium risk</option><option value="low">Low risk</option></select>}
+        {me?.role === "owner" && <select aria-label="Filter shops by customer risk" value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)} className="h-12 rounded-2xl border border-border/70 bg-card px-3 text-sm font-semibold shadow-sm outline-none focus:border-primary sm:w-44"><option value="all">All risk levels</option><option value="high">High risk (90+ days)</option><option value="medium">Medium risk (31–89 days)</option><option value="risk">Risk (8–30 days)</option><option value="low">Low risk (0–7 days)</option></select>}
         <select aria-label="Sort shops" value={sortBy} onChange={(e) => { const value = e.target.value; setSortBy(value); localStorage.setItem("shops-sort-by", value); }} className="h-12 rounded-2xl border border-border/70 bg-card px-3 text-sm font-semibold shadow-sm outline-none focus:border-primary sm:w-52">
           <option value="overdue">Oldest overdue first</option>
           <option value="amount">Highest outstanding first</option>
@@ -158,7 +162,7 @@ function ShopsPage() {
                   </span>
                 </Link>
                 <div className="shrink-0 text-right">
-                  {me?.role === "owner" && <div className={`mb-1 text-[10px] font-extrabold ${s.riskLevel === "High" ? "text-rose-700" : s.riskLevel === "Medium" ? "text-amber-700" : "text-emerald-700"}`}>{s.riskLevel} risk · {s.riskScore}/100</div>}
+                  {me?.role === "owner" && <div className={`mb-1 text-[10px] font-extrabold ${s.riskLevel === "High" ? "text-rose-700" : s.riskLevel === "Medium" ? "text-amber-700" : s.riskLevel === "Risk" ? "text-orange-700" : "text-emerald-700"}`}>{s.riskLevel} risk · {s.riskScore}/100</div>}
                   <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Outstanding</div>
                   <div className={`mt-0.5 tabular text-sm font-extrabold ${s.due > 0 ? "text-rose-700" : "text-emerald-700"}`}>{inr(s.due)}</div>
                   {s.oldestOverdueDays > 0 && <div className="mt-1 text-[10px] font-bold text-rose-700">{s.oldestOverdueDays} days since oldest unpaid bill</div>}
