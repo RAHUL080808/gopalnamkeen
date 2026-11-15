@@ -61,7 +61,7 @@ function ShopsPage() {
           for (const entry of entries) {
             if (!entry.billDate || !Number.isFinite(entry.amount) || entry.amount <= 0) continue;
             const totals = paymentTotals.get(payment.shop_id) ?? { paid: 0, latePaid: 0 };
-            const delayDays = Math.max(0, ageInDays(String(payment.paid_at).slice(0, 10)) - ageInDays(entry.billDate));
+            const delayDays = Math.max(0, ageInDays(entry.billDate) - ageInDays(String(payment.paid_at).slice(0, 10)));
             totals.paid += entry.amount;
             if (delayDays > 7) totals.latePaid += entry.amount;
             paymentTotals.set(payment.shop_id, totals);
