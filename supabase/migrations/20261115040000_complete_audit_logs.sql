@@ -86,7 +86,12 @@ BEGIN
     CASE WHEN v_entity_id IS NOT NULL THEN left(v_entity_id::text, 8) END
   );
 
-  IF TG_TABLE_NAME = 'payments' THEN
+  IF TG_TABLE_NAME = 'bills' THEN
+    SELECT concat_ws(' · ', s.name, COALESCE(COALESCE(v_new, v_old) ->> 'bill_number', 'Bill'))
+      INTO v_entity_label
+      FROM public.shops s
+      WHERE s.id = NULLIF(COALESCE(v_new, v_old) ->> 'shop_id', '')::uuid;
+  ELSIF TG_TABLE_NAME = 'payments' THEN
     SELECT concat_ws(' · ', s.name, COALESCE(b.bill_number, 'Advance payment'))
       INTO v_entity_label
       FROM public.shops s
