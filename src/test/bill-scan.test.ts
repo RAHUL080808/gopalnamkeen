@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { extractBillFields, suggestShops, validateBillImage, validateScannedBill } from "@/lib/bill-scan";
 
 describe("Bill photo extraction", () => {
-  it("reads only customer shop, date, bill number and final total, not supplier or product totals", () => {
-    expect(extractBillFields(`SAI SINDHU ENTERPRISES\nShop Name: Mahalaxmi Stores\nBill No: SS-108/26\nBill Date: 14/11/2026\nNamkeen 10 150.00\nSubtotal: 1,500.00\nTotal Qty: 10\nTax Total: 75.00\nGrand Total: Rs. 1,575.00`)).toEqual({
-      shopName: "Mahalaxmi Stores", billDate: "2026-11-14", amount: "1575.00", billNumber: "SS-108/26",
+  it("reads Order No instead of Bill No and reads the final total", () => {
+    expect(extractBillFields(`SAI SINDHU ENTERPRISES\nShop Name: Mahalaxmi Stores\nBill No: SS-108/26\nOrder No: ORD-765/26\nBill Date: 14/11/2026\nNamkeen 10 150.00\nSubtotal: 1,500.00\nTotal Qty: 10\nTax Total: 75.00\nGrand Total: Rs. 1,575.00`)).toEqual({
+      shopName: "Mahalaxmi Stores", billDate: "2026-11-14", amount: "1575.00", billNumber: "ORD-765/26",
     });
   });
-  it("keeps bill number blank when absent", () => {
-    expect(extractBillFields("Bill To:\nRavi Stores\nDate: 14 Nov 2026\nNet Amount: INR 600.50")).toEqual({ shopName: "Ravi Stores", billDate: "2026-11-14", amount: "600.50", billNumber: "" });
+  it("does not mistake Bill No for Order No", () => {
+    expect(extractBillFields("Bill To:\nRavi Stores\nBill No: B-123\nDate: 14 Nov 2026\nNet Amount: INR 600.50")).toEqual({ shopName: "Ravi Stores", billDate: "2026-11-14", amount: "600.50", billNumber: "" });
   });
   it("does not infer a customer from an unlabelled supplier heading", () => {
     expect(extractBillFields("Sai Sindhu Enterprises\nDate 2026-11-14\nTotal 500").shopName).toBe("");
@@ -27,18 +27,16 @@ describe("Existing shop matching", () => {
 });
 
 describe("Confirmed bill input rules", () => {
-  const draft = { shopId: "existing-shop", billDate: "2026-11-14", amount: "600.50", billNumber: "" };
+  const draft = { shopId: "existing-shop", billDate: "2026-11-14", amount: "600.50", billNumber: "ORD-765/26" };
   it("requires a selected existing shop", () => { expect(() => validateScannedBill({ ...draft, shopId: "" })).toThrow("Select an existing shop"); });
   it("requires a valid bill date", () => { expect(() => validateScannedBill({ ...draft, billDate: "2026-02-31" })).toThrow("valid bill date"); });
   it("requires an amount greater than zero", () => {
     for (const amount of ["0", "-1", "", "Infinity", "1.001"]) expect(() => validateScannedBill({ ...draft, amount })).toThrow();
     expect(validateScannedBill(draft).amount).toBe(600.5);
   });
-  it("omits an absent number so existing automatic bill numbering remains authoritative", () => {
-    expect(validateScannedBill(draft)).toEqual({ shop_id: "existing-shop", bill_date: "2026-11-14", amount: 600.5 });
-  });
-  it("includes a supplied number without generated balances, status, payment data or image data", () => {
-    expect(validateScannedBill({ ...draft, billNumber: " SS-12 " })).toEqual({ shop_id: "existing-shop", bill_date: "2026-11-14", amount: 600.5, bill_number: "SS-12" });
+  it("requires the Order No and saves it in the existing bill_number field", () => {
+    expect(() => validateScannedBill({ ...draft, billNumber: "" })).toThrow("Order No");
+    expect(validateScannedBill({ ...draft, billNumber: " ORD-765/26 " })).toEqual({ shop_id: "existing-shop", bill_date: "2026-11-14", amount: 600.5, bill_number: "ORD-765/26" });
   });
   it("accepts camera JPEGs but rejects empty images and unsupported formats", () => {
     expect(() => validateBillImage({ type: "image/jpeg", size: 1000 })).not.toThrow();
