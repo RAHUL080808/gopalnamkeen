@@ -19,6 +19,7 @@ export function StatusBadge({ status: s }: { status: string | null }) {
       status === "paid" && "border-emerald-200 bg-emerald-50 text-emerald-800",
       status === "partial" && "border-amber-200 bg-amber-50 text-amber-800",
       status === "unpaid" && "border-rose-200 bg-rose-50 text-rose-700",
+      status === "returned" && "border-slate-300 bg-slate-100 text-slate-700",
     )}>
       {STATUS_LABEL[status] ?? status}
     </span>
