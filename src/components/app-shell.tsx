@@ -61,7 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-extrabold tracking-tight text-slate-900">Sai Sindhu Enterprises</div>
             <div className="mt-0.5 flex items-center gap-1.5 text-[10px] font-semibold tracking-wide text-slate-500">
-              <span>Business Management</span><span className="text-slate-300">•</span><span className="capitalize text-emerald-700">{isDriver ? "Field App" : me?.role ?? (isLoading ? "…" : "no access")}</span>
+              <span>Business Management</span><span className="text-slate-300">•</span><span className="capitalize text-emerald-700">{isDriver ? "Field App" : isDeveloper && !me?.role ? "Developer" : me?.role ?? (isLoading ? "…" : "no access")}</span>
             </div>
           </div>
           {me?.role && (
