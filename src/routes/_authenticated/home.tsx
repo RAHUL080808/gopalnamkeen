@@ -235,58 +235,8 @@ function OwnerDashboard() {
         .sort((a: any, z: any) => z.age - a.age);
       const received = b.reduce((s, x) => s + Number(x.paid_amount), 0);
 
-      // Compare bill sales by bill date and collections by actual payment date.
-      const periodNow = new Date();
-      const dateKey = (date: Date) => [
-        date.getFullYear(),
-        String(date.getMonth() + 1).padStart(2, "0"),
-        String(date.getDate()).padStart(2, "0"),
-      ].join("-");
-      const shiftDays = (date: Date, days: number) => {
-        const shifted = new Date(date);
-        shifted.setDate(shifted.getDate() + days);
-        return shifted;
-      };
-      const todayStart = new Date(periodNow.getFullYear(), periodNow.getMonth(), periodNow.getDate());
-      const weekStart = shiftDays(todayStart, -((todayStart.getDay() + 6) % 7));
-      const monthStart = new Date(periodNow.getFullYear(), periodNow.getMonth(), 1);
-      const tomorrowStart = shiftDays(todayStart, 1);
-      const previousMonthStart = new Date(periodNow.getFullYear(), periodNow.getMonth() - 1, 1);
-      const previousMonthEnd = new Date(
-        periodNow.getFullYear(),
-        periodNow.getMonth() - 1,
-        Math.min(periodNow.getDate() + 1, new Date(periodNow.getFullYear(), periodNow.getMonth(), 0).getDate() + 1),
-      );
-      const getPeriodTotals = (start: Date, end: Date) => {
-        const startKey = dateKey(start);
-        const endKey = dateKey(end);
-        const periodSales = b
-          .filter((bill) => String(bill.bill_date) >= startKey && String(bill.bill_date) < endKey)
-          .reduce((sum, bill) => sum + Number(bill.amount), 0);
-        const periodCollection = p
-          .filter((payment) => {
-            const paidDate = dateKey(new Date(payment.paid_at));
-            return paidDate >= startKey && paidDate < endKey;
-          })
-          .reduce((sum, payment) => sum + Number(payment.amount), 0);
-        return { sales: periodSales, collection: periodCollection };
-      };
-      const comparisons = {
-        daily: {
-          current: getPeriodTotals(todayStart, tomorrowStart),
-          previous: getPeriodTotals(shiftDays(todayStart, -1), todayStart),
-        },
-        weekly: {
-          current: getPeriodTotals(weekStart, tomorrowStart),
-          previous: getPeriodTotals(shiftDays(weekStart, -7), shiftDays(weekStart, -7 + ((todayStart.getDay() + 6) % 7) + 1)),
-        },
-        monthly: {
-          current: getPeriodTotals(monthStart, tomorrowStart),
-          previous: getPeriodTotals(previousMonthStart, previousMonthEnd),
-        },
-      };
       return {
-        sales, received, comparisons,
+        sales, received,
         overdueBills,
         overdue7: overdueBills.length,
         overdue15: overdueBills.filter((x: any) => x.age >= 15).length,
@@ -390,55 +340,6 @@ function OwnerDashboard() {
             </div>
           )) : <p className="p-4 text-sm text-muted-foreground">No collection recorded today.</p>}
         </Card>
-      </section>
-
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-base font-extrabold tracking-tight sm:text-lg">Sales & collection comparison</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">Current period compared with the previous equivalent period</p>
-        </div>
-        <div className="grid gap-3 lg:grid-cols-3">
-          {([
-            { key: "daily", label: "Daily", currentLabel: "Today", previousLabel: "Yesterday" },
-            { key: "weekly", label: "Weekly", currentLabel: "Week to date", previousLabel: "Last week (same days)" },
-            { key: "monthly", label: "Monthly", currentLabel: "Month to date", previousLabel: "Last month (same days)" },
-          ] as const).map((period) => {
-            const current = data?.comparisons?.[period.key]?.current;
-            const previous = data?.comparisons?.[period.key]?.previous;
-            const changeText = (value: number, oldValue: number) => oldValue === 0
-              ? value === 0 ? "No change" : "New activity"
-              : `${value > oldValue ? "+" : ""}${Math.round(((value - oldValue) / oldValue) * 100)}% vs previous`;
-            const changeTone = (value: number, oldValue: number) => value > oldValue
-              ? "text-emerald-600"
-              : value < oldValue ? "text-rose-600" : "text-muted-foreground";
-            return (
-              <Card key={period.key} className="p-4 sm:p-5">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-extrabold">{period.label}</h3>
-                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">{period.currentLabel}</span>
-                </div>
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between gap-2 text-xs">
-                      <span className="font-semibold text-muted-foreground">Sales</span>
-                      <span className={`font-bold ${isLoading ? "text-muted-foreground" : changeTone(current?.sales ?? 0, previous?.sales ?? 0)}`}>{isLoading ? "—" : changeText(current?.sales ?? 0, previous?.sales ?? 0)}</span>
-                    </div>
-                    <div className="mt-1.5 text-xl font-extrabold tabular">{isLoading ? "—" : inr(current?.sales ?? 0)}</div>
-                    <div className="mt-0.5 text-[11px] text-muted-foreground">{period.previousLabel}: {isLoading ? "—" : inr(previous?.sales ?? 0)}</div>
-                  </div>
-                  <div className="border-t border-border/70 pt-3">
-                    <div className="flex items-center justify-between gap-2 text-xs">
-                      <span className="font-semibold text-muted-foreground">Collection</span>
-                      <span className={`font-bold ${isLoading ? "text-muted-foreground" : changeTone(current?.collection ?? 0, previous?.collection ?? 0)}`}>{isLoading ? "—" : changeText(current?.collection ?? 0, previous?.collection ?? 0)}</span>
-                    </div>
-                    <div className="mt-1.5 text-xl font-extrabold tabular text-emerald-600">{isLoading ? "—" : inr(current?.collection ?? 0)}</div>
-                    <div className="mt-0.5 text-[11px] text-muted-foreground">{period.previousLabel}: {isLoading ? "—" : inr(previous?.collection ?? 0)}</div>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
       </section>
 
       <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
