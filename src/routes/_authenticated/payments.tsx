@@ -69,7 +69,7 @@ function AllPayments() {
           {(p as any).remarks && <div className="mt-2 text-xs text-muted-foreground">Remark: {(p as any).remarks}</div>}
           <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
             <span className="min-w-0 truncate capitalize">{p.employee_name} · {p.employee_role}</span>
-            <div className="flex shrink-0 items-center gap-2"><span>{fmtDateTime(p.paid_at)}</span>{me?.role === "owner" && <><Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => setModeEdit({ id: p.id, mode: p.mode })}>Edit type</Button><Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => setDateEdit({ id: p.id, paid_at: p.paid_at })}>Edit date</Button></>}</div>
+            <div className="flex shrink-0 items-center gap-2"><span>{fmtDateTime(p.paid_at)}</span>{me?.role === "owner" && <>{!p.is_void && <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => setModeEdit({ id: p.id, mode: p.mode })}>Edit type</Button>}<Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => setDateEdit({ id: p.id, paid_at: p.paid_at })}>Edit date</Button></>}</div>
           </div>
         </Card>
       ))}
