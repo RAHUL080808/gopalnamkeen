@@ -98,3 +98,49 @@ $$;
 REVOKE ALL ON FUNCTION public.owner_return_bill(uuid, text, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.owner_return_bill(uuid, text, text) TO authenticated;
 REVOKE ALL ON FUNCTION public.guard_returned_bill() FROM PUBLIC, anon, authenticated;
+
+
+-- Do not allow a returned bill to receive a new direct payment.
+CREATE OR REPLACE FUNCTION public.reject_payment_for_returned_bill()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF NEW.bill_id IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.bills WHERE id = NEW.bill_id AND is_returned
+  ) THEN
+    RAISE EXCEPTION 'This bill was returned and cannot receive payments';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS payments_reject_returned_bill ON public.payments;
+CREATE TRIGGER payments_reject_returned_bill
+  BEFORE INSERT OR UPDATE OF bill_id ON public.payments
+  FOR EACH ROW EXECUTE FUNCTION public.reject_payment_for_returned_bill();
+
+-- Also protect the owner-only advance allocation path.
+CREATE OR REPLACE FUNCTION public.reject_allocation_for_returned_bill()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.bills WHERE id = NEW.bill_id AND is_returned
+  ) THEN
+    RAISE EXCEPTION 'This bill was returned and cannot receive payment allocations';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS payment_allocations_reject_returned_bill ON public.payment_allocations;
+CREATE TRIGGER payment_allocations_reject_returned_bill
+  BEFORE INSERT OR UPDATE OF bill_id ON public.payment_allocations
+  FOR EACH ROW EXECUTE FUNCTION public.reject_allocation_for_returned_bill();
+
+REVOKE ALL ON FUNCTION public.reject_payment_for_returned_bill() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.reject_allocation_for_returned_bill() FROM PUBLIC, anon, authenticated;
