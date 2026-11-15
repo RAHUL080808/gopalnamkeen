@@ -9,6 +9,7 @@ const requestSchema = z.object({
 
 const resultSchema = z.object({
   shopName: z.string().max(200).default(""),
+  orderNo: z.string().max(100).default(""),
   billDate: z.string().max(10).default(""),
   amount: z.union([z.string(), z.number()]).transform(value => String(value)).default(""),
 });
@@ -27,11 +28,12 @@ export const scanBillWithGemini = createServerFn({ method: "POST" })
     if (!apiKey) throw new Error("Gemini API key is not configured in server secrets.");
 
     const prompt = [
-      "Read this Indian FMCG sales invoice. Return ONLY JSON with exactly: shopName, billDate, amount.",
+      "Read this Indian FMCG sales invoice. Return ONLY JSON with exactly: shopName, orderNo, billDate, amount.",
       "shopName: exact CUSTOMER / BUYER / BILL TO / PARTY name; never the supplier. If unclear, use empty string.",
+      "orderNo: exact value printed next to Order No / Order Number / Order #. This is the business order number, NOT Bill No or Invoice No. Preserve letters, digits, hyphens and slashes exactly. If no clear Order No is printed, use empty string.",
       "billDate: actual invoice date in YYYY-MM-DD, not due, dispatch, or order date. If unclear, use empty string.",
       "amount: final payable total (Grand Total / Net Payable), not subtotal, tax, or balance due. Digits with optional decimal, no currency symbol. If unclear, use empty string.",
-      "Never return bill/invoice number, GST number, phone, or address. Never guess; use empty strings for unclear fields.",
+      "Never use Bill No or Invoice No as orderNo. Never return GST number, phone, or address. Never guess; use empty strings for unclear fields.",
     ].join("\n");
 
     const requestModel = async (model: string) => fetch(
@@ -86,5 +88,5 @@ export const scanBillWithGemini = createServerFn({ method: "POST" })
     const amount = /^\d+(?:\.\d{1,2})?$/.test(normalizedAmount) && Number(normalizedAmount) > 0
       ? normalizedAmount : "";
 
-    return { shopName: result.shopName.trim(), billDate: date, amount, billNumber: "" };
+    return { shopName: result.shopName.trim(), billDate: date, amount, billNumber: result.orderNo.trim() };
   });
