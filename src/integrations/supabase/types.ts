@@ -299,6 +299,41 @@ export type Database = {
           },
         ]
       }
+      payment_mode_edit_history: {
+        Row: {
+          edited_at: string
+          edited_by: string
+          id: string
+          new_mode: Database["public"]["Enums"]["payment_mode"]
+          old_mode: Database["public"]["Enums"]["payment_mode"]
+          payment_id: string
+        }
+        Insert: {
+          edited_at?: string
+          edited_by: string
+          id?: string
+          new_mode: Database["public"]["Enums"]["payment_mode"]
+          old_mode: Database["public"]["Enums"]["payment_mode"]
+          payment_id: string
+        }
+        Update: {
+          edited_at?: string
+          edited_by?: string
+          id?: string
+          new_mode?: Database["public"]["Enums"]["payment_mode"]
+          old_mode?: Database["public"]["Enums"]["payment_mode"]
+          payment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_mode_edit_history_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_date_edit_history: {
         Row: {
           edited_at: string
