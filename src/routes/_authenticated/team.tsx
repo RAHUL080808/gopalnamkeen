@@ -36,14 +36,16 @@ function TeamPage() {
         supabase.from("payments").select("employee_id, amount, paid_at").eq("is_void", false),
       ]);
       const today = new Date().toDateString();
+      const yesterdayDate = new Date();
+      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+      const yesterday = yesterdayDate.toDateString();
       return (roles ?? []).map((r) => {
         const p = profiles?.find((x) => x.id === r.user_id);
         const mine = (pays ?? []).filter((x) => x.employee_id === r.user_id);
         return {
           id: r.user_id, role: r.role, name: p?.full_name ?? "", phone: p?.phone,
-          total: mine.reduce((s, x) => s + Number(x.amount), 0),
           today: mine.filter((x) => new Date(x.paid_at).toDateString() === today).reduce((s, x) => s + Number(x.amount), 0),
-          count: mine.length,
+          yesterday: mine.filter((x) => new Date(x.paid_at).toDateString() === yesterday).reduce((s, x) => s + Number(x.amount), 0),
         };
       });
     },
@@ -58,12 +60,12 @@ function TeamPage() {
             <div key={e.id} className="flex items-center justify-between gap-3 p-4 transition-all hover:bg-primary/[0.035]">
               <div className="min-w-0">
                 <div className="truncate font-semibold">{e.name}</div>
-                <div className="text-xs capitalize text-muted-foreground">{e.role}{e.phone ? ` · ${e.phone}` : ""} · {e.count} payments</div>
+                <div className="text-xs capitalize text-muted-foreground">{e.role}{e.phone ? ` · ${e.phone}` : ""}</div>
               </div>
               <div className="flex items-center gap-2">
                 <div className="text-right">
-                  <div className="tabular font-bold text-success">{inr(e.total)}</div>
-                  <div className="tabular text-xs text-muted-foreground">Today {inr(e.today)}</div>
+                  <div className="tabular text-sm font-bold text-success">Today {inr(e.today)}</div>
+                  <div className="tabular text-xs text-muted-foreground">Yesterday {inr(e.yesterday)}</div>
                 </div>
                 <Button type="button" size="icon" variant="outline" aria-label="Edit team member" onClick={() => setEditing(e)}><Pencil className="h-4 w-4" /></Button>
                 <Button type="button" size="icon" variant="destructive" aria-label="Remove team member" disabled={remove.isPending} onClick={() => { if (window.confirm("Remove " + (e.name || "this team member") + "? They will lose app access, but payment history will remain.")) remove.mutate(e.id); }}><Trash2 className="h-4 w-4" /></Button>
