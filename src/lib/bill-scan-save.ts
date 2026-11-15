@@ -24,7 +24,7 @@ export async function saveConfirmedScannedBill(draft: ScannedBillDraft) {
   // The exact existing owner insert path. Defaults, RLS and paid-amount protection remain in charge.
   const { data, error } = await supabase.from("bills").insert(row).select("id, bill_number, bill_date, amount, paid_amount, balance, status").single();
   if (error) {
-    if (error.code === "23505") throw new Error("This bill number already exists. Review it or leave the number blank for automatic numbering.");
+    if (error.code === "23505") throw new Error("This Order No. already exists. Check the order number or review the existing bill.");
     throw new Error("Could not confirm this bill was saved. Check Bills before trying again.");
   }
   if (!data) throw new Error("Could not confirm this bill was saved. Check Bills before trying again.");
