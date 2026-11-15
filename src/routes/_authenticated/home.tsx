@@ -233,10 +233,11 @@ function OwnerDashboard() {
       const yesterdayUpi = yesterdaysPayments.filter((x) => x.mode === "upi").reduce((s, x) => s + Number(x.amount), 0);
       const yesterdayBank = yesterdaysPayments.filter((x) => x.mode === "bank_transfer").reduce((s, x) => s + Number(x.amount), 0);
       const yesterdayCheque = yesterdaysPayments.filter((x) => x.mode === "cheque").reduce((s, x) => s + Number(x.amount), 0);
-      const sales = b.reduce((s, x) => s + Number(x.amount), 0);
+      const activeBills = b.filter((x: any) => !x.is_returned);
+      const sales = activeBills.reduce((s, x) => s + Number(x.amount), 0);
       const now = new Date();
       const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-      const overdueBills = b
+      const overdueBills = activeBills
         .filter((x: any) => Number(x.balance) > 0)
         .map((x: any) => {
           const [y, m, d] = String(x.bill_date).split("-").map(Number);
@@ -246,7 +247,7 @@ function OwnerDashboard() {
         })
         .filter((x: any) => x.age >= 7)
         .sort((a: any, z: any) => z.age - a.age);
-      const received = b.reduce((s, x) => s + Number(x.paid_amount), 0);
+      const received = activeBills.reduce((s, x) => s + Number(x.paid_amount), 0);
 
       return {
         sales, received,
@@ -255,11 +256,11 @@ function OwnerDashboard() {
         overdue15: overdueBills.filter((x: any) => x.age >= 15).length,
         overdue30: overdueBills.filter((x: any) => x.age >= 30).length,
         overdueAmount: overdueBills.reduce((sum: number, x: any) => sum + Number(x.balance), 0),
-        outstanding: b.reduce((s, x) => s + Number(x.balance), 0),
-        unpaid: b.filter((x) => x.status !== "paid").length,
-        paidBills: b.filter((x) => x.status === "paid").length,
-        partialBills: b.filter((x) => x.status === "partial").length,
-        totalBills: b.length,
+        outstanding: activeBills.reduce((s, x) => s + Number(x.balance), 0),
+        unpaid: activeBills.filter((x) => x.status !== "paid").length,
+        paidBills: activeBills.filter((x) => x.status === "paid").length,
+        partialBills: activeBills.filter((x) => x.status === "partial").length,
+        totalBills: activeBills.length,
         dailyEmployees, yesterdayEmployees,
         dailyCash, dailyUpi, dailyBank, dailyCheque,
         dailyTotal: dailyCash + dailyUpi + dailyBank + dailyCheque,
