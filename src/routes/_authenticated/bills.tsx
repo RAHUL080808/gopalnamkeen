@@ -87,7 +87,7 @@ function BillsPage() {
                 </div>
                 {me?.role === "owner" && (
                   <div className="flex shrink-0 items-center gap-0.5 border-l border-slate-100 pl-1">
-                    {!b.is_returned && <><button aria-label="Edit bill" onClick={() => setEdit(b)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-800"><Pencil className="h-4 w-4" /></button><ReturnBillButton billId={b.id} billNumber={b.bill_number} paidAmount={Number(b.paid_amount)} /><DeleteBillButton billId={b.id} billNumber={b.bill_number} /></>}
+                    {!b.is_returned && <><button aria-label="Edit bill" onClick={() => setEdit(b)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-800"><Pencil className="h-4 w-4" /></button><ReturnBillButton billId={b.id} billNumber={b.bill_number} billDate={b.bill_date} paidAmount={Number(b.paid_amount)} /><DeleteBillButton billId={b.id} billNumber={b.bill_number} /></>}
                   </div>
                 )}
               </div>
