@@ -11,6 +11,7 @@ import { BillDialog, DeleteBillButton } from "@/components/bill-dialog";
 import { BillEntryDialog } from "@/components/bill-entry-dialog";
 import { DriverBillAmountDialog } from "@/components/driver-bill-amount-dialog";
 import { PaymentDateDialog } from "@/components/payment-date-dialog";
+import { ReturnBillButton } from "@/components/return-bill-button";
 import { ShopDialog } from "./shops";
 import { pageMeta } from "@/lib/page-meta";
 import { useMe } from "@/lib/session";
@@ -68,8 +69,9 @@ function ShopDetail() {
   if (!data) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (!data.shop) return <Empty>Shop not found.</Empty>;
   const { shop, bills, pays, amountEdits = [] } = data;
-  const total = bills.reduce((s, b) => s + Number(b.amount), 0);
-  const due = bills.reduce((s, b) => s + Number(b.balance), 0);
+  const activeBills = bills.filter((b: any) => !b.is_returned);
+  const total = activeBills.reduce((s, b) => s + Number(b.amount), 0);
+  const due = activeBills.reduce((s, b) => s + Number(b.balance), 0);
   const unallocatedAdvance = pays.filter((p: any) => p.bill_id === null && !p.is_void).reduce((sum: number, p: any) => sum + Math.max(0, Number(p.amount) - (p.payment_allocations ?? []).reduce((a: number, x: any) => a + Number(x.amount), 0)), 0);
 
   return (
@@ -91,16 +93,16 @@ function ShopDetail() {
             <Card key={b.id} className="relative overflow-hidden border-border/70 p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
               <div className={`absolute inset-x-0 top-0 h-1 ${b.status === "paid" ? "bg-emerald-500" : Number(b.paid_amount) > 0 ? "bg-amber-400" : "bg-rose-400"}`} />
               <div className="flex items-start justify-between gap-3 pt-1">
-                <div className="min-w-0"><div className="font-extrabold tracking-tight">{b.bill_number}</div><div className="mt-1 text-xs text-muted-foreground">{fmtDate(b.bill_date)}</div></div>
-                <StatusBadge status={b.status} />
+                <div className="min-w-0"><div className="font-extrabold tracking-tight">{b.bill_number}</div><div className="mt-1 text-xs text-muted-foreground">{fmtDate(b.bill_date)}</div>{b.is_returned && <div className="mt-1 text-xs font-semibold text-amber-700">Return proof: {b.return_reason}</div>}</div>
+                <StatusBadge status={b.is_returned ? "returned" : b.status} />
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-muted/45 p-3">
                 <div><div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Bill amount</div><div className="mt-1 text-sm font-bold tabular-nums">{inr(b.amount)}</div></div>
-                <div><div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Balance due</div><div className="mt-1 text-sm font-extrabold tabular-nums">{inr(b.balance)}</div></div>
+                <div><div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Balance due</div><div className="mt-1 text-sm font-extrabold tabular-nums">{b.is_returned ? "Excluded" : inr(b.balance)}</div></div>
               </div>
               {(me?.role === "owner" || me?.role === "driver") && <div className="mt-3 flex justify-end gap-2">
                 {me?.role === "driver" && <Button type="button" variant="outline" size="sm" onClick={() => setDriverEditBill({ id: b.id, bill_number: b.bill_number, amount: Number(b.amount), paid_amount: Number(b.paid_amount) })}><Pencil className="h-4 w-4" /> Edit amount</Button>}
-                {me?.role === "owner" && <><Button type="button" variant="outline" size="sm" onClick={() => setEditBill(b)}><Pencil className="h-4 w-4" /> Edit</Button><DeleteBillButton billId={b.id} billNumber={b.bill_number} /></>}
+                {me?.role === "owner" && !b.is_returned && <><Button type="button" variant="outline" size="sm" onClick={() => setEditBill(b)}><Pencil className="h-4 w-4" /> Edit</Button><ReturnBillButton billId={b.id} billNumber={b.bill_number} /><DeleteBillButton billId={b.id} billNumber={b.bill_number} /></>}
               </div>}
             </Card>
           ))}
