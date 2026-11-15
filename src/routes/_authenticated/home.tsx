@@ -195,7 +195,7 @@ function OwnerDashboard() {
     queryKey: ["owner-dashboard"],
     queryFn: async () => {
       const [bills, payments, corrections, advances] = await Promise.all([
-        supabase.from("bills").select("id, amount, paid_amount, balance, status, bill_date, bill_number, shop_id, shops(name)"),
+        supabase.from("bills").select("id, amount, paid_amount, balance, status, bill_date, bill_number, shop_id, is_returned, shops(name)"),
         supabase.from("payments").select("id, amount, mode, paid_at, employee_id, employee_name, employee_role, is_void, shops(name)").eq("is_void", false).order("paid_at", { ascending: false }),
         supabase.from("payment_corrections").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("payments").select("amount, payment_allocations(amount)").is("bill_id", null).eq("is_void", false),
