@@ -39,7 +39,7 @@ function ShopsPage() {
     queryFn: async () => {
       const [{ data: s }, { data: b }] = await Promise.all([
         supabase.from("shops").select("*").order("name"),
-        supabase.from("bills").select("shop_id, balance, bill_date"),
+        supabase.from("bills").select("shop_id, balance, bill_date, is_returned"),
       ]);
       const today = new Date();
       const ageInDays = (date: string) => {
@@ -48,7 +48,7 @@ function ShopsPage() {
         return Math.max(0, Math.floor((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(year, month - 1, day)) / 86400000));
       };
       return (s ?? []).map((x) => {
-        const shopBills = (b ?? []).filter((y) => y.shop_id === x.id);
+        const shopBills = (b ?? []).filter((y: any) => y.shop_id === x.id && !y.is_returned);
         const outstandingBills = shopBills.filter((y) => Number(y.balance) > 0);
         return {
           ...x,
