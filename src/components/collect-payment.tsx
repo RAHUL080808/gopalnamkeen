@@ -35,7 +35,7 @@ export function CollectPayment({ initialShopId = null }: { initialShopId?: strin
     queryFn: async () => {
       const [{ data: s }, { data: b }] = await Promise.all([
         supabase.from("shops").select("id, name, address, phone").order("name"),
-        supabase.from("bills").select("id, bill_number, bill_date, amount, paid_amount, balance, status, shop_id").neq("status", "paid").order("bill_date"),
+        supabase.from("bills").select("id, bill_number, bill_date, amount, paid_amount, balance, status, shop_id, is_returned").eq("is_returned", false).neq("status", "paid").order("bill_date"),
       ]);
       return (s ?? []).map((shop) => {
         const bills = (b ?? []).filter((x) => x.shop_id === shop.id) as Bill[];
@@ -66,7 +66,7 @@ export function CollectPayment({ initialShopId = null }: { initialShopId?: strin
         paid_at: paidAt,
       } as never);
       if (error) throw error;
-      const { data: updatedBills, error: balanceError } = await supabase.from("bills").select("balance").eq("shop_id", bill.shop_id);
+      const { data: updatedBills, error: balanceError } = await supabase.from("bills").select("balance").eq("shop_id", bill.shop_id).eq("is_returned", false);
       if (balanceError) throw balanceError;
       return { phone: shop?.phone ?? null, shopName: shop?.name ?? "Customer", amount: amt, mode, paidAt, outstanding: (updatedBills ?? []).reduce((sum, row) => sum + Number(row.balance), 0) };
     },
