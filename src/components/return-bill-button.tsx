@@ -15,14 +15,20 @@ const CATEGORIES = [
   { value: "other", label: "Other reason" },
 ];
 
-export function ReturnBillButton({ billId, billNumber, paidAmount = 0, disabled = false }: {
+export function ReturnBillButton({ billId, billNumber, billDate, paidAmount = 0, disabled = false }: {
   billId: string;
   billNumber: string;
+  billDate: string;
   paidAmount?: number;
   disabled?: boolean;
 }) {
-  // Paid and partially paid bills must never show the return action.
-  if (Number(paidAmount) > 0) return null;
+  // Only unpaid bills within 7 calendar days of their bill date can be returned.
+  const [year, month, day] = billDate.split("-").map(Number);
+  const billDay = Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1);
+  const now = new Date();
+  const todayDay = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const ageDays = Math.floor((todayDay - billDay) / 86_400_000);
+  if (Number(paidAmount) > 0 || ageDays > 7) return null;
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState("shop_closed");
   const [reason, setReason] = useState("");
