@@ -102,7 +102,7 @@ function ShopDetail() {
               </div>
               {(me?.role === "owner" || me?.role === "driver") && <div className="mt-3 flex justify-end gap-2">
                 {me?.role === "driver" && !b.is_returned && <Button type="button" variant="outline" size="sm" onClick={() => setDriverEditBill({ id: b.id, bill_number: b.bill_number, amount: Number(b.amount), paid_amount: Number(b.paid_amount) })}><Pencil className="h-4 w-4" /> Edit amount</Button>}
-                {me?.role === "owner" && !b.is_returned && <><Button type="button" variant="outline" size="sm" onClick={() => setEditBill(b)}><Pencil className="h-4 w-4" /> Edit</Button><ReturnBillButton billId={b.id} billNumber={b.bill_number} paidAmount={Number(b.paid_amount)} /><DeleteBillButton billId={b.id} billNumber={b.bill_number} /></>}
+                {me?.role === "owner" && !b.is_returned && <><Button type="button" variant="outline" size="sm" onClick={() => setEditBill(b)}><Pencil className="h-4 w-4" /> Edit</Button><ReturnBillButton billId={b.id} billNumber={b.bill_number} billDate={b.bill_date} paidAmount={Number(b.paid_amount)} /><DeleteBillButton billId={b.id} billNumber={b.bill_number} /></>}
               </div>}
             </Card>
           ))}
