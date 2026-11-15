@@ -26,6 +26,7 @@ type AuditLog = {
   entity_id: string | null;
   entity_label: string | null;
   changed_fields: Record<string, { old: unknown; new: unknown }>;
+  new_data?: Record<string, unknown> | null;
 };
 
 function displayValue(value: unknown) {
@@ -47,7 +48,7 @@ function AuditLogsPage() {
     queryFn: async ({ pageParam }) => {
       const { data, error } = await (supabase as any)
         .from("audit_logs")
-        .select("id,event_at,actor_id,actor_name,actor_email,action,entity_type,entity_id,entity_label,changed_fields")
+        .select("id,event_at,actor_id,actor_name,actor_email,action,entity_type,entity_id,entity_label,changed_fields,new_data")
         .order("event_at", { ascending: false })
         .range(pageParam, pageParam + 499);
       if (error) throw error;
@@ -128,6 +129,7 @@ function AuditLogsPage() {
                   </div>
                   <time className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">{fmtDateTime(log.event_at)}</time>
                 </div>
+                {typeof log.new_data?._historical_note === "string" && <div className="border-b border-border/60 bg-sky-50/70 px-3 py-2 text-xs text-sky-900 sm:px-4">{String(log.new_data._historical_note)}</div>}
                 <div className="grid gap-2 p-3 sm:grid-cols-2 sm:p-4">
                   {fields.map(([key, value]) => (
                     <div key={key} className="min-w-0 rounded-xl bg-muted/45 p-2.5">
