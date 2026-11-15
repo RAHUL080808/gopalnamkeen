@@ -15,11 +15,14 @@ const CATEGORIES = [
   { value: "other", label: "Other reason" },
 ];
 
-export function ReturnBillButton({ billId, billNumber, disabled = false }: {
+export function ReturnBillButton({ billId, billNumber, paidAmount = 0, disabled = false }: {
   billId: string;
   billNumber: string;
+  paidAmount?: number;
   disabled?: boolean;
 }) {
+  // Paid and partially paid bills must never show the return action.
+  if (Number(paidAmount) > 0) return null;
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState("shop_closed");
   const [reason, setReason] = useState("");
