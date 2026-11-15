@@ -31,4 +31,5 @@ export const STATUS_LABEL: Record<string, string> = {
   unpaid: "Unpaid",
   partial: "Partially Paid",
   paid: "Paid",
+  returned: "Returned",
 };
