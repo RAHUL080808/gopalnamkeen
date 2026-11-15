@@ -64,7 +64,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span>Business Management</span><span className="text-slate-300">•</span><span className="capitalize text-emerald-700">{isDriver ? "Field App" : isDeveloper && !me?.role ? "Developer" : me?.role ?? (isLoading ? "…" : "no access")}</span>
             </div>
           </div>
-          {me?.role && (
+          {(me?.role || isDeveloper) && (
             <nav className="hidden items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1 md:flex">
               {nav.map((n) => (
                 <Link key={n.to} to={n.to} className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-slate-600 transition-all hover:bg-white hover:text-slate-950 hover:shadow-sm" activeProps={{ className: "bg-[#142342] text-white shadow-sm" }}>
@@ -88,12 +88,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             <h2 className="font-extrabold tracking-tight text-slate-900">No access yet</h2>
             <p className="mt-1 text-sm leading-relaxed text-slate-500">Your account has no role yet. Ask the owner to add you as a driver or salesman.</p>
           </div>
-        ) : me.role !== "owner" && (OWNER_ONLY.some((p) => pathname.startsWith(p)) || (pathname === "/shops" && me.role !== "driver") || (pathname.startsWith("/audit-logs") && !canViewAudit)) ? (
+        ) : me?.role !== "owner" && (OWNER_ONLY.some((p) => pathname.startsWith(p)) || (pathname === "/shops" && me?.role !== "driver") || (pathname.startsWith("/audit-logs") && !canViewAudit)) ? (
           <div className="mx-auto mt-10 max-w-lg rounded-3xl border border-slate-200 bg-white p-7 text-center text-sm text-slate-500 shadow-lg">This page is for the owner only.</div>
         ) : children}
       </main>
 
-      {me?.role && (
+      {(me?.role || isDeveloper) && (
         <nav className={`fixed inset-x-0 bottom-0 z-30 border-t backdrop-blur-xl md:hidden ${isDriver ? "border-slate-200/80 bg-white/96 shadow-[0_-10px_32px_rgba(15,23,42,0.10)]" : "border-slate-200 bg-white/95 shadow-[0_-8px_28px_rgba(15,23,42,0.08)]"}`}>
           <div className={`mx-auto flex px-3 pb-[max(0.55rem,env(safe-area-inset-bottom))] ${isDriver ? "max-w-2xl gap-2 pt-2" : "max-w-md pt-2"}`}>
             {nav.map((n) => {
