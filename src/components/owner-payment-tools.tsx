@@ -101,7 +101,7 @@ export function OwnerPaymentTools() {
       if (error) throw error;
       const selectedShop = shops.find(s => s.id === shopId);
       const [{ data: updatedBills, error: balanceError }, { data: advances, error: advanceError }] = await Promise.all([
-        supabase.from("bills").select("balance").eq("shop_id", shopId),
+        supabase.from("bills").select("balance").eq("shop_id", shopId).eq("is_returned", false),
         (supabase.from("payments") as any).select("amount,payment_allocations(amount)").eq("shop_id", shopId).is("bill_id", null).eq("is_void", false),
       ]);
       if (balanceError) throw balanceError;
