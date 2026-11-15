@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Search, ScrollText, CalendarDays, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,19 +41,22 @@ function AuditLogsPage() {
   const [entity, setEntity] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const { data = [], isLoading, isError, refetch, isFetching } = useQuery({
+  const { data: pages, isLoading, isError, refetch, isFetching, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["audit-logs"],
-    queryFn: async () => {
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
       const { data, error } = await (supabase as any)
         .from("audit_logs")
         .select("id,event_at,actor_id,actor_name,actor_email,action,entity_type,entity_id,entity_label,changed_fields")
         .order("event_at", { ascending: false })
-        .limit(500);
+        .range(pageParam, pageParam + 499);
       if (error) throw error;
       return (data ?? []) as AuditLog[];
     },
+    getNextPageParam: (lastPage, allPages) => lastPage.length === 500 ? allPages.length * 500 : undefined,
     staleTime: 15_000,
   });
+  const data = pages?.pages.flat() ?? [];
 
   const entities = useMemo(() => [...new Set(data.map((x) => x.entity_type))].sort(), [data]);
   const filtered = useMemo(() => data.filter((log) => {
@@ -141,7 +144,8 @@ function AuditLogsPage() {
               </Card>
             );
           })}
-          <p className="text-center text-xs text-muted-foreground">Showing up to the latest 500 recorded events. Use filters to narrow the results.</p>
+          {hasNextPage && <div className="flex justify-center"><Button variant="outline" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>{isFetchingNextPage ? "Loading older events…" : "Load older events"}</Button></div>}
+          <p className="text-center text-xs text-muted-foreground">Loaded {data.length} events. Continue loading to browse older activity.</p>
         </div>}
     </div>
   );
