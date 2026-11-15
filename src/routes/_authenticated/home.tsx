@@ -250,6 +250,13 @@ function OwnerDashboard() {
       const todayStart = new Date(periodNow.getFullYear(), periodNow.getMonth(), periodNow.getDate());
       const weekStart = shiftDays(todayStart, -((todayStart.getDay() + 6) % 7));
       const monthStart = new Date(periodNow.getFullYear(), periodNow.getMonth(), 1);
+      const tomorrowStart = shiftDays(todayStart, 1);
+      const previousMonthStart = new Date(periodNow.getFullYear(), periodNow.getMonth() - 1, 1);
+      const previousMonthEnd = new Date(
+        periodNow.getFullYear(),
+        periodNow.getMonth() - 1,
+        Math.min(periodNow.getDate() + 1, new Date(periodNow.getFullYear(), periodNow.getMonth(), 0).getDate() + 1),
+      );
       const getPeriodTotals = (start: Date, end: Date) => {
         const startKey = dateKey(start);
         const endKey = dateKey(end);
@@ -266,16 +273,16 @@ function OwnerDashboard() {
       };
       const comparisons = {
         daily: {
-          current: getPeriodTotals(todayStart, shiftDays(todayStart, 1)),
+          current: getPeriodTotals(todayStart, tomorrowStart),
           previous: getPeriodTotals(shiftDays(todayStart, -1), todayStart),
         },
         weekly: {
-          current: getPeriodTotals(weekStart, shiftDays(weekStart, 7)),
-          previous: getPeriodTotals(shiftDays(weekStart, -7), weekStart),
+          current: getPeriodTotals(weekStart, tomorrowStart),
+          previous: getPeriodTotals(shiftDays(weekStart, -7), shiftDays(weekStart, -7 + ((todayStart.getDay() + 6) % 7) + 1)),
         },
         monthly: {
-          current: getPeriodTotals(monthStart, new Date(periodNow.getFullYear(), periodNow.getMonth() + 1, 1)),
-          previous: getPeriodTotals(new Date(periodNow.getFullYear(), periodNow.getMonth() - 1, 1), monthStart),
+          current: getPeriodTotals(monthStart, tomorrowStart),
+          previous: getPeriodTotals(previousMonthStart, previousMonthEnd),
         },
       };
       return {
@@ -393,8 +400,8 @@ function OwnerDashboard() {
         <div className="grid gap-3 lg:grid-cols-3">
           {([
             { key: "daily", label: "Daily", currentLabel: "Today", previousLabel: "Yesterday" },
-            { key: "weekly", label: "Weekly", currentLabel: "This week", previousLabel: "Last week" },
-            { key: "monthly", label: "Monthly", currentLabel: "This month", previousLabel: "Last month" },
+            { key: "weekly", label: "Weekly", currentLabel: "Week to date", previousLabel: "Last week (same days)" },
+            { key: "monthly", label: "Monthly", currentLabel: "Month to date", previousLabel: "Last month (same days)" },
           ] as const).map((period) => {
             const current = data?.comparisons?.[period.key]?.current;
             const previous = data?.comparisons?.[period.key]?.previous;
