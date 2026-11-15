@@ -132,6 +132,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/bills'
+    | '/audit-logs'
     | '/history'
     | '/home'
     | '/payments'
