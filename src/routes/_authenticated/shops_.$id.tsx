@@ -101,7 +101,7 @@ function ShopDetail() {
                 <div><div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Balance due</div><div className="mt-1 text-sm font-extrabold tabular-nums">{b.is_returned ? "Excluded" : inr(b.balance)}</div></div>
               </div>
               {(me?.role === "owner" || me?.role === "driver") && <div className="mt-3 flex justify-end gap-2">
-                {me?.role === "driver" && <Button type="button" variant="outline" size="sm" onClick={() => setDriverEditBill({ id: b.id, bill_number: b.bill_number, amount: Number(b.amount), paid_amount: Number(b.paid_amount) })}><Pencil className="h-4 w-4" /> Edit amount</Button>}
+                {me?.role === "driver" && !b.is_returned && <Button type="button" variant="outline" size="sm" onClick={() => setDriverEditBill({ id: b.id, bill_number: b.bill_number, amount: Number(b.amount), paid_amount: Number(b.paid_amount) })}><Pencil className="h-4 w-4" /> Edit amount</Button>}
                 {me?.role === "owner" && !b.is_returned && <><Button type="button" variant="outline" size="sm" onClick={() => setEditBill(b)}><Pencil className="h-4 w-4" /> Edit</Button><ReturnBillButton billId={b.id} billNumber={b.bill_number} /><DeleteBillButton billId={b.id} billNumber={b.bill_number} /></>}
               </div>}
             </Card>
