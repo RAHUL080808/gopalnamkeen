@@ -81,7 +81,6 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/bills': typeof AuthenticatedBillsRoute
   '/audit-logs': typeof AuthenticatedAuditLogsRoute
-  '/audit-logs': typeof AuthenticatedAuditLogsRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/home': typeof AuthenticatedHomeRoute
   '/payments': typeof AuthenticatedPaymentsRoute
@@ -93,6 +92,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/bills': typeof AuthenticatedBillsRoute
+  '/audit-logs': typeof AuthenticatedAuditLogsRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/home': typeof AuthenticatedHomeRoute
   '/payments': typeof AuthenticatedPaymentsRoute
