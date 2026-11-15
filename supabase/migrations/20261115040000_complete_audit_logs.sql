@@ -86,6 +86,27 @@ BEGIN
     CASE WHEN v_entity_id IS NOT NULL THEN left(v_entity_id::text, 8) END
   );
 
+  IF TG_TABLE_NAME = 'payments' THEN
+    SELECT concat_ws(' · ', s.name, COALESCE(b.bill_number, 'Advance payment'))
+      INTO v_entity_label
+      FROM public.shops s
+      LEFT JOIN public.bills b ON b.id = NULLIF(COALESCE(v_new, v_old) ->> 'bill_id', '')::uuid
+      WHERE s.id = NULLIF(COALESCE(v_new, v_old) ->> 'shop_id', '')::uuid;
+  ELSIF TG_TABLE_NAME = 'payment_allocations' THEN
+    SELECT concat_ws(' · ', s.name, b.bill_number)
+      INTO v_entity_label
+      FROM public.bills b
+      JOIN public.shops s ON s.id = b.shop_id
+      WHERE b.id = NULLIF(COALESCE(v_new, v_old) ->> 'bill_id', '')::uuid;
+  ELSIF TG_TABLE_NAME = 'payment_corrections' THEN
+    SELECT concat_ws(' · ', s.name, COALESCE(b.bill_number, 'Payment correction'))
+      INTO v_entity_label
+      FROM public.payments p
+      JOIN public.shops s ON s.id = p.shop_id
+      LEFT JOIN public.bills b ON b.id = p.bill_id
+      WHERE p.id = NULLIF(COALESCE(v_new, v_old) ->> 'payment_id', '')::uuid;
+  END IF;
+
   IF TG_TABLE_NAME = 'profiles' THEN
     v_actor_name := COALESCE(v_new ->> 'full_name', v_old ->> 'full_name');
   END IF;
