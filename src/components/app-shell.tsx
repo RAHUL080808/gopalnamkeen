@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { Home, Store, FileText, IndianRupee, Users, HandCoins, History, LogOut, Sparkles } from "lucide-react";
+import { Home, Store, FileText, IndianRupee, Users, HandCoins, History, LogOut, Sparkles, ScrollText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMe } from "@/lib/session";
 
@@ -13,6 +13,13 @@ const OWNER_NAV = [
   { to: "/bills", label: "Bills", icon: FileText },
   { to: "/payments", label: "Payments", icon: IndianRupee },
   { to: "/team", label: "Team", icon: Users },
+  { to: "/audit-logs", label: "Audit Logs", icon: ScrollText },
+] as const;
+
+const DEVELOPER_EMAIL = "rahulmahajan080808@gmail.com";
+const DEVELOPER_NAV = [
+  { to: "/home", label: "Overview", icon: Home },
+  { to: "/audit-logs", label: "Audit Logs", icon: ScrollText },
 ] as const;
 
 const STAFF_NAV = [
@@ -40,7 +47,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   const isDriver = me?.role === "driver";
-  const nav = me?.role === "owner" ? OWNER_NAV : isDriver ? DRIVER_NAV : STAFF_NAV;
+  const isDeveloper = me?.email?.toLowerCase() === DEVELOPER_EMAIL;
+  const canViewAudit = me?.role === "owner" || isDeveloper;
+  const nav = me?.role === "owner" ? OWNER_NAV : isDeveloper ? DEVELOPER_NAV : isDriver ? DRIVER_NAV : STAFF_NAV;
 
   return (
     <div className={`min-h-screen text-slate-900 ${isDriver ? "bg-[#f3f7f6] pb-[calc(6.25rem+env(safe-area-inset-bottom))] md:pb-8" : "bg-[#f4f7fb] pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-8"}`}>
@@ -73,13 +82,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className={`mx-auto px-3 sm:px-6 ${isDriver ? "max-w-2xl py-3 md:py-6" : "max-w-7xl py-5 md:py-8"}`}>
         {isLoading ? (
           <div className="flex min-h-48 flex-col items-center justify-center gap-3 text-sm text-slate-500"><span className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-100 border-t-emerald-700" />Preparing your workspace…</div>
-        ) : !me?.role ? (
+        ) : !me?.role && !isDeveloper ? (
           <div className="mx-auto mt-10 max-w-lg rounded-3xl border border-slate-200 bg-white p-7 text-center shadow-xl shadow-slate-900/[0.04]">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600"><Sparkles className="h-6 w-6" /></div>
             <h2 className="font-extrabold tracking-tight text-slate-900">No access yet</h2>
             <p className="mt-1 text-sm leading-relaxed text-slate-500">Your account has no role yet. Ask the owner to add you as a driver or salesman.</p>
           </div>
-        ) : me.role !== "owner" && (OWNER_ONLY.some((p) => pathname.startsWith(p)) || (pathname === "/shops" && me.role !== "driver")) ? (
+        ) : me.role !== "owner" && (OWNER_ONLY.some((p) => pathname.startsWith(p)) || (pathname === "/shops" && me.role !== "driver") || (pathname.startsWith("/audit-logs") && !canViewAudit)) ? (
           <div className="mx-auto mt-10 max-w-lg rounded-3xl border border-slate-200 bg-white p-7 text-center text-sm text-slate-500 shadow-lg">This page is for the owner only.</div>
         ) : children}
       </main>
