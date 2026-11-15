@@ -8,6 +8,7 @@ import { Card, Empty, StatusBadge } from "@/components/bits";
 import { Button } from "@/components/ui/button";
 import { BillDialog, DeleteBillButton } from "@/components/bill-dialog";
 import { BillEntryDialog } from "@/components/bill-entry-dialog";
+import { ReturnBillButton } from "@/components/return-bill-button";
 import { useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { pageMeta } from "@/lib/page-meta";
@@ -18,7 +19,8 @@ export const Route = createFileRoute("/_authenticated/bills")({
 });
 
 const FILTERS = [
-  { v: "all", l: "All" },
+  { v: "all", l: "Active" },
+  { v: "returned", l: "Returned" },
   { v: "unpaid", l: "Unpaid" },
   { v: "partial", l: "Partial" },
   { v: "paid", l: "Paid" },
@@ -43,18 +45,20 @@ function BillsPage() {
     return Math.floor((Date.UTC(todayUtc.getFullYear(), todayUtc.getMonth(), todayUtc.getDate()) - Date.UTC(y, m - 1, d)) / 86400000);
   };
   const list = [...(
-    filter === "all"
-      ? bills
-      : filter === "overdue_1m"
-        ? bills.filter((b) => Number(b.balance) > 0 && ageInDays(b.bill_date) >= 30)
-        : filter === "overdue_6m"
-          ? bills.filter((b) => Number(b.balance) > 0 && ageInDays(b.bill_date) >= 180)
-          : bills.filter((b) => b.status === filter)
+    filter === "returned"
+      ? bills.filter((b) => b.is_returned)
+      : filter === "all"
+        ? bills.filter((b) => !b.is_returned)
+        : filter === "overdue_1m"
+          ? bills.filter((b) => !b.is_returned && Number(b.balance) > 0 && ageInDays(b.bill_date) >= 30)
+          : filter === "overdue_6m"
+            ? bills.filter((b) => !b.is_returned && Number(b.balance) > 0 && ageInDays(b.bill_date) >= 180)
+            : bills.filter((b) => !b.is_returned && b.status === filter)
   )].filter((b) => !selectedDate || b.bill_date === selectedDate);
 
   return (
     <div className="space-y-5">
-      <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#132443] via-[#20395f] to-[#315477] p-5 text-white shadow-xl shadow-slate-900/10 sm:p-7"><div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full border-[25px] border-white/[0.06]" /><div className="relative flex items-end justify-between gap-3"><div><div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/55">Sales ledger</div><h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Bills</h1><p className="mt-1 text-xs text-white/65">Find invoices, review balances and manage bill records.</p></div><Button onClick={() => setOpen(true)} className="shrink-0 rounded-xl bg-white text-slate-900 shadow-lg hover:bg-slate-100"><Plus className="h-4 w-4" /> New bill</Button></div><div className="relative mt-5 flex gap-5 border-t border-white/10 pt-4"><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Total bills</div><div className="mt-1 text-xl font-extrabold tabular">{bills.length}</div></div><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Filtered results</div><div className="mt-1 text-xl font-extrabold tabular text-cyan-200">{list.length}</div></div><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Total balance</div><div className="mt-1 text-xl font-extrabold tabular text-amber-200">{inr(bills.reduce((sum, b) => sum + Number(b.balance), 0))}</div></div></div></div>
+      <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#132443] via-[#20395f] to-[#315477] p-5 text-white shadow-xl shadow-slate-900/10 sm:p-7"><div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full border-[25px] border-white/[0.06]" /><div className="relative flex items-end justify-between gap-3"><div><div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/55">Sales ledger</div><h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Bills</h1><p className="mt-1 text-xs text-white/65">Find invoices, review balances and manage bill records.</p></div><Button onClick={() => setOpen(true)} className="shrink-0 rounded-xl bg-white text-slate-900 shadow-lg hover:bg-slate-100"><Plus className="h-4 w-4" /> New bill</Button></div><div className="relative mt-5 flex gap-5 border-t border-white/10 pt-4"><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Total bills</div><div className="mt-1 text-xl font-extrabold tabular">{bills.filter((b) => !b.is_returned).length}</div></div><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Filtered results</div><div className="mt-1 text-xl font-extrabold tabular text-cyan-200">{list.length}</div></div><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Total balance</div><div className="mt-1 text-xl font-extrabold tabular text-amber-200">{inr(bills.filter((b) => !b.is_returned).reduce((sum, b) => sum + Number(b.balance), 0))}</div></div></div></div>
       <div className="flex gap-2 overflow-x-auto pb-1">
         {FILTERS.map((f) => (
           <button key={f.v} onClick={() => setFilter(f.v)} className={cn("shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition-all", filter === f.v ? "border-primary bg-primary text-primary-foreground shadow-sm" : "border-border/70 bg-card text-muted-foreground hover:bg-muted")}>{f.l}</button>
@@ -73,18 +77,18 @@ function BillsPage() {
               <div className="flex items-center gap-3 p-3.5 sm:p-4">
                 <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${b.status === "paid" ? "bg-emerald-50 text-emerald-700" : b.status === "partial" ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700"}`}><ReceiptText className="h-[18px] w-[18px]" /></span>
                 <Link to="/shops/$id" params={{ id: b.shop_id }} className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2"><span className="font-extrabold tracking-tight text-slate-900 transition-colors group-hover:text-emerald-800">{b.bill_number}</span><StatusBadge status={b.status} />{Number(b.balance) > 0 && ageInDays(b.bill_date) >= 7 && <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700"><Clock3 className="h-3 w-3" /> {ageInDays(b.bill_date)}d overdue</span>}</div>
-                  <div className="mt-1 truncate text-xs text-slate-500">{b.shops?.name} <span className="text-slate-300">·</span> {fmtDate(b.bill_date)}</div>
+                  <div className="flex flex-wrap items-center gap-2"><span className="font-extrabold tracking-tight text-slate-900 transition-colors group-hover:text-emerald-800">{b.bill_number}</span><StatusBadge status={b.is_returned ? "returned" : b.status} />{!b.is_returned && Number(b.balance) > 0 && ageInDays(b.bill_date) >= 7 && <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700"><Clock3 className="h-3 w-3" /> {ageInDays(b.bill_date)}d overdue</span>}</div>
+                  <div className="mt-1 truncate text-xs text-slate-500">{b.shops?.name} <span className="text-slate-300">·</span> {fmtDate(b.bill_date)}</div>{b.is_returned && <div className="mt-1 text-xs font-semibold text-amber-700">Returned: {b.return_reason}</div>}
                 </Link>
                 <div className="shrink-0 text-right">
                   <div className="tabular text-sm font-extrabold tracking-tight text-slate-900">{inr(b.amount)}</div>
                   <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Balance</div>
-                  <div className="tabular text-xs font-bold text-rose-700">{inr(b.balance)}</div>
+                  <div className="tabular text-xs font-bold text-rose-700">{b.is_returned ? "Excluded" : inr(b.balance)}</div>
                 </div>
                 {me?.role === "owner" && (
                   <div className="flex shrink-0 items-center gap-0.5 border-l border-slate-100 pl-1">
                     <button aria-label="Edit bill" onClick={() => setEdit(b)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-800"><Pencil className="h-4 w-4" /></button>
-                    <DeleteBillButton billId={b.id} billNumber={b.bill_number} />
+                    {!b.is_returned && <><ReturnBillButton billId={b.id} billNumber={b.bill_number} /><DeleteBillButton billId={b.id} billNumber={b.bill_number} /></>}
                   </div>
                 )}
               </div>
