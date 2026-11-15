@@ -31,6 +31,7 @@ function ShopsPage() {
   const [q, setQ] = useState("");
   const [sortBy, setSortBy] = useState(() => localStorage.getItem("shops-sort-by") || "overdue");
   const [overdueFilter, setOverdueFilter] = useState("all");
+  const [activityFilter, setActivityFilter] = useState("all");
   const [open, setOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const { data: me } = useMe();
@@ -50,10 +51,14 @@ function ShopsPage() {
       return (s ?? []).map((x) => {
         const shopBills = (b ?? []).filter((y: any) => y.shop_id === x.id && !y.is_returned);
         const outstandingBills = shopBills.filter((y) => Number(y.balance) > 0);
+        const lastOrderDate = shopBills.reduce<string | null>((latest, y) => !latest || y.bill_date > latest ? y.bill_date : latest, null);
+        const daysSinceLastOrder = lastOrderDate ? ageInDays(lastOrderDate) : null;
         return {
           ...x,
           due: shopBills.reduce((t, y) => t + Number(y.balance), 0),
           oldestOverdueDays: outstandingBills.reduce((max, y) => Math.max(max, ageInDays(y.bill_date)), 0),
+          lastOrderDate,
+          daysSinceLastOrder,
         };
       });
     },
@@ -73,19 +78,23 @@ function ShopsPage() {
       const matchesOverdue = overdueFilter === "all"
         || (overdueFilter === "1m" && s.oldestOverdueDays >= 30)
         || (overdueFilter === "6m" && s.oldestOverdueDays >= 180);
-      return matchesSearch && matchesOverdue;
+      const matchesActivity = activityFilter === "all"
+        || (activityFilter === "inactive30" && (s.daysSinceLastOrder === null || s.daysSinceLastOrder >= 30))
+        || (activityFilter === "never" && s.lastOrderDate === null);
+      return matchesSearch && matchesOverdue && matchesActivity;
     });
     return [...filtered].sort((a, b) => {
       if (sortBy === "overdue") return b.oldestOverdueDays - a.oldestOverdueDays || b.due - a.due || a.name.localeCompare(b.name);
       if (sortBy === "amount") return b.due - a.due || a.name.localeCompare(b.name);
+      if (sortBy === "inactive") { const aDays = a.daysSinceLastOrder ?? Number.MAX_SAFE_INTEGER; const bDays = b.daysSinceLastOrder ?? Number.MAX_SAFE_INTEGER; return bDays === aDays ? a.name.localeCompare(b.name) : bDays > aDays ? 1 : -1; }
       return a.name.localeCompare(b.name);
     });
-  }, [shops, q, sortBy, overdueFilter]);
+  }, [shops, q, sortBy, overdueFilter, activityFilter]);
 
   return (
     <div className="space-y-5">
       <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#132443] via-[#20395f] to-[#315477] p-5 text-white shadow-xl shadow-slate-900/10 sm:p-7"><div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full border-[25px] border-white/[0.06]" /><div className="relative flex items-end justify-between gap-3"><div><div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/55">Customer directory</div><h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Shops</h1><p className="mt-1 text-xs text-white/65">Manage retailer profiles and keep track of pending balances.</p></div><Button className="shrink-0 rounded-xl bg-white text-slate-900 shadow-lg hover:bg-slate-100" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Add shop</Button></div><div className="relative mt-5 flex gap-5 border-t border-white/10 pt-4"><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Total shops</div><div className="mt-1 text-xl font-extrabold tabular">{shops.length}</div></div><div><div className="text-[10px] font-semibold uppercase tracking-wider text-white/50">Total outstanding</div><div className="mt-1 text-xl font-extrabold tabular text-amber-200">{inr(shops.reduce((sum, s) => sum + s.due, 0))}</div></div></div></div>
-      {me?.role === "owner" && <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="h-4 w-4" /> Import Excel</Button>}
+      {me?.role === "owner" && <div className="flex flex-wrap items-center gap-2"><div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">Inactive shops · <strong>{shops.filter((s) => s.daysSinceLastOrder === null || s.daysSinceLastOrder >= 30).length}</strong> (30+ days without an order)</div><Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="h-4 w-4" /> Import Excel</Button></div>}
       <div className="flex flex-col gap-2 sm:flex-row">
         <div className="relative min-w-0 flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -106,9 +115,11 @@ function ShopsPage() {
           <option value="1m">1+ month overdue</option>
           <option value="6m">6+ months overdue</option>
         </select>
+        {me?.role === "owner" && <select aria-label="Filter shops by order activity" value={activityFilter} onChange={(e) => setActivityFilter(e.target.value)} className="h-12 rounded-2xl border border-border/70 bg-card px-3 text-sm font-semibold shadow-sm outline-none focus:border-primary sm:w-52"><option value="all">All order activity</option><option value="inactive30">No order in 30+ days</option><option value="never">Never ordered</option></select>}
         <select aria-label="Sort shops" value={sortBy} onChange={(e) => { const value = e.target.value; setSortBy(value); localStorage.setItem("shops-sort-by", value); }} className="h-12 rounded-2xl border border-border/70 bg-card px-3 text-sm font-semibold shadow-sm outline-none focus:border-primary sm:w-52">
           <option value="overdue">Oldest overdue first</option>
           <option value="amount">Highest outstanding first</option>
+          <option value="inactive">Longest without an order</option>
           <option value="name">Shop name A–Z</option>
         </select>
       </div>
@@ -129,6 +140,7 @@ function ShopsPage() {
                   </span>
                 </Link>
                 <div className="shrink-0 text-right">
+                  {me?.role === "owner" && <div className={`mb-1 text-[10px] font-bold ${s.daysSinceLastOrder === null || s.daysSinceLastOrder >= 30 ? "text-amber-700" : "text-emerald-700"}`}>{s.daysSinceLastOrder === null ? "No orders yet" : s.daysSinceLastOrder >= 30 ? `No order for ${s.daysSinceLastOrder} days` : `Last order ${s.daysSinceLastOrder} days ago`}</div>}
                   <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Outstanding</div>
                   <div className={`mt-0.5 tabular text-sm font-extrabold ${s.due > 0 ? "text-rose-700" : "text-emerald-700"}`}>{inr(s.due)}</div>
                   {s.oldestOverdueDays > 0 && <div className="mt-1 text-[10px] font-bold text-rose-700">{s.oldestOverdueDays} days since oldest unpaid bill</div>}
