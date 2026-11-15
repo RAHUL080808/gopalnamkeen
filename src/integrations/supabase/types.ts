@@ -58,6 +58,11 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          is_returned: boolean
+          return_category: string | null
+          return_reason: string | null
+          returned_at: string | null
+          returned_by: string | null
           notes: string | null
           paid_amount: number
           shop_id: string
@@ -71,6 +76,11 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_returned?: boolean
+          return_category?: string | null
+          return_reason?: string | null
+          returned_at?: string | null
+          returned_by?: string | null
           notes?: string | null
           paid_amount?: number
           shop_id: string
@@ -84,6 +94,11 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_returned?: boolean
+          return_category?: string | null
+          return_reason?: string | null
+          returned_at?: string | null
+          returned_by?: string | null
           notes?: string | null
           paid_amount?: number
           shop_id?: string
