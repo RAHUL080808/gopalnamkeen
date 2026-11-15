@@ -91,8 +91,10 @@ export function extractBillFields(text: string): ExtractedBill {
   const dateMatch = dateSource.match(/(?:invoice\s*date|bill\s*date|dated)\s*[:.]?\s*(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}|\d{4}[\/.-]\d{1,2}[\/.-]\d{1,2})/i);
   const billDate = parseDate(dateMatch?.[1] ?? dateSource);
 
-  // This workflow intentionally does not read or save the invoice/bill number.
-  const billNumber = "";
+  // Read only the business Order No. Never substitute Bill No / Invoice No.
+  const orderLine = lines.find(line => /\border\s*(?:no\.?|number|#)\b/i.test(line));
+  const orderMatch = orderLine?.match(/\border\s*(?:no\.?|number|#)\s*[:#.-]?\s*([A-Z0-9][A-Z0-9\/-]*)/i);
+  const billNumber = orderMatch?.[1]?.trim() ?? "";
 
   // Prefer the printed Grand Total row, not item totals, taxable amount, GST, or Round Off.
   const grandLine = lines.find(line => /\bgrand\s*total\b/i.test(line));
@@ -115,7 +117,8 @@ export function validateScannedBill(draft: ScannedBillDraft) {
   if (!draft.shopId) throw new Error("Select an existing shop.");
   if (!validBillDate(draft.billDate)) throw new Error("Enter a valid bill date.");
   if (!/^\d+(?:\.\d{1,2})?$/.test(draft.amount.trim()) || !Number.isFinite(Number(draft.amount)) || Number(draft.amount) <= 0) throw new Error("Enter a total amount greater than zero, with up to two decimal places.");
-  if (draft.billNumber.trim().length > 100) throw new Error("Bill number is too long.");
+  if (!draft.billNumber.trim()) throw new Error("Enter the Order No. shown on the bill photo.");
+  if (draft.billNumber.trim().length > 100) throw new Error("Order No. is too long.");
   return {
     shop_id: draft.shopId,
     bill_date: draft.billDate,
