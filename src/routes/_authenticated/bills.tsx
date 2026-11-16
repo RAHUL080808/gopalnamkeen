@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { BillDialog, DeleteBillButton } from "@/components/bill-dialog";
 import { BillEntryDialog } from "@/components/bill-entry-dialog";
 import { ReturnBillButton } from "@/components/return-bill-button";
+import { DriverBillAmountDialog } from "@/components/driver-bill-amount-dialog";
 import { useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { pageMeta } from "@/lib/page-meta";
@@ -33,6 +34,7 @@ function BillsPage() {
   const [selectedDate, setSelectedDate] = useState("");
   const { data: me } = useMe();
   const [open, setOpen] = useState(false);
+  const [driverEditBill, setDriverEditBill] = useState<null | { id: string; bill_number: string; amount: number; paid_amount: number }>(null);
   const [edit, setEdit] = useState<null | { id: string; shop_id: string; bill_date: string; amount: number; notes: string | null; paid_amount: number }>(null);
   const { data: bills = [] } = useQuery({
     queryKey: ["bills"],
@@ -85,6 +87,7 @@ function BillsPage() {
                   <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Balance</div>
                   <div className="tabular text-xs font-bold text-rose-700">{b.is_returned ? "Excluded" : inr(b.balance)}</div>
                 </div>
+                {me?.role === "driver" && !b.is_returned && ageInDays(b.bill_date) >= 0 && ageInDays(b.bill_date) <= 2 && <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => setDriverEditBill({ id: b.id, bill_number: b.bill_number, amount: Number(b.amount), paid_amount: Number(b.paid_amount) })}><Pencil className="h-3.5 w-3.5" /> Edit</Button>}
                 {me?.role === "owner" && (
                   <div className="flex shrink-0 items-center gap-0.5 border-l border-slate-100 pl-1">
                     {!b.is_returned && <><button aria-label="Edit bill" onClick={() => setEdit(b)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-800"><Pencil className="h-4 w-4" /></button><ReturnBillButton billId={b.id} billNumber={b.bill_number} billDate={b.bill_date} paidAmount={Number(b.paid_amount)} /><DeleteBillButton billId={b.id} billNumber={b.bill_number} /></>}
@@ -98,6 +101,7 @@ function BillsPage() {
       )}
       <BillEntryDialog open={open} onOpenChange={setOpen} />
       {edit && <BillDialog key={edit.id} open onOpenChange={(o) => !o && setEdit(null)} bill={edit} />}
+      {driverEditBill && <DriverBillAmountDialog bill={driverEditBill} onClose={() => setDriverEditBill(null)} />}
     </div>
   );
 }
