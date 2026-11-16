@@ -72,6 +72,12 @@ function ShopDetail() {
   const activeBills = bills.filter((b: any) => !b.is_returned);
   const total = activeBills.reduce((s, b) => s + Number(b.amount), 0);
   const due = activeBills.reduce((s, b) => s + Number(b.balance), 0);
+  const billAgeInDays = (date: string) => {
+    const [y, m, d] = date.split("-").map(Number);
+    if (!y || !m || !d) return Number.POSITIVE_INFINITY;
+    const now = new Date();
+    return Math.floor((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - Date.UTC(y, m - 1, d)) / 86400000);
+  };
   const unallocatedAdvance = pays.filter((p: any) => p.bill_id === null && !p.is_void).reduce((sum: number, p: any) => sum + Math.max(0, Number(p.amount) - (p.payment_allocations ?? []).reduce((a: number, x: any) => a + Number(x.amount), 0)), 0);
 
   return (
@@ -101,7 +107,7 @@ function ShopDetail() {
                 <div><div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Balance due</div><div className="mt-1 text-sm font-extrabold tabular-nums">{b.is_returned ? "Excluded" : inr(b.balance)}</div></div>
               </div>
               {(me?.role === "owner" || me?.role === "driver") && <div className="mt-3 flex justify-end gap-2">
-                {me?.role === "driver" && !b.is_returned && <Button type="button" variant="outline" size="sm" onClick={() => setDriverEditBill({ id: b.id, bill_number: b.bill_number, amount: Number(b.amount), paid_amount: Number(b.paid_amount) })}><Pencil className="h-4 w-4" /> Edit amount</Button>}
+                {me?.role === "driver" && !b.is_returned && billAgeInDays(b.bill_date) >= 0 && billAgeInDays(b.bill_date) <= 2 && <Button type="button" variant="outline" size="sm" onClick={() => setDriverEditBill({ id: b.id, bill_number: b.bill_number, amount: Number(b.amount), paid_amount: Number(b.paid_amount) })}><Pencil className="h-4 w-4" /> Edit amount</Button>}
                 {me?.role === "owner" && !b.is_returned && <><Button type="button" variant="outline" size="sm" onClick={() => setEditBill(b)}><Pencil className="h-4 w-4" /> Edit</Button><ReturnBillButton billId={b.id} billNumber={b.bill_number} billDate={b.bill_date} paidAmount={Number(b.paid_amount)} /><DeleteBillButton billId={b.id} billNumber={b.bill_number} /></>}
               </div>}
             </Card>
