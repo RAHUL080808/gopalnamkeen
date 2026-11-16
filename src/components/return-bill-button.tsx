@@ -53,8 +53,17 @@ export function ReturnBillButton({ billId, billNumber, billDate, paidAmount = 0,
 
   return (
     <>
-      <Button type="button" variant="outline" size="sm" disabled={disabled} onClick={() => setOpen(true)}>
-        <RotateCcw className="h-4 w-4" /> Return bill
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="h-8 w-8 shrink-0"
+        title="Return bill"
+        aria-label="Return bill"
+        disabled={disabled}
+        onClick={() => setOpen(true)}
+      >
+        <RotateCcw className="h-3.5 w-3.5" />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
