@@ -38,20 +38,10 @@ function HomePage() {
 
 function StaffDashboard({ employeeId }: { employeeId: string }) {
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
-  const [billDialogOpen, setBillDialogOpen] = useState(false);
-  const [showCollectPayment, setShowCollectPayment] = useState(false);
   const today = new Date().toLocaleDateString("en-CA");
-  const todayLabel = new Intl.DateTimeFormat("en-IN", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(new Date());
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const dayStart = new Date(`${today}T00:00:00`);
   const dayEnd = new Date(dayStart);
   dayEnd.setDate(dayEnd.getDate() + 1);
-
   const { data: collectionPayments = [], isLoading: paymentsLoading } = useQuery({
     queryKey: ["driver-today-collections", employeeId, today],
     queryFn: async () => {
@@ -66,9 +56,13 @@ function StaffDashboard({ employeeId }: { employeeId: string }) {
       return data ?? [];
     },
   });
-  const collectionTotal = collectionPayments.reduce((sum, payment) => sum + Number(payment.amount), 0);
-
-  const { data: orders = [], isLoading: ordersLoading } = useQuery({
+  const cashTotal = collectionPayments.filter((p) => p.mode === "cash").reduce((sum, p) => sum + Number(p.amount), 0);
+  const upiTotal = collectionPayments.filter((p) => p.mode === "upi").reduce((sum, p) => sum + Number(p.amount), 0);
+  const bankTotal = collectionPayments.filter((p) => p.mode === "bank_transfer").reduce((sum, p) => sum + Number(p.amount), 0);
+  const chequeTotal = collectionPayments.filter((p) => p.mode === "cheque").reduce((sum, p) => sum + Number(p.amount), 0);
+  const onlineTotal = upiTotal + bankTotal;
+  const collectionTotal = cashTotal + onlineTotal + chequeTotal;
+  const { data: orders = [], isLoading } = useQuery({
     queryKey: ["staff-todays-orders", today],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
@@ -77,7 +71,6 @@ function StaffDashboard({ employeeId }: { employeeId: string }) {
         .eq("visit_date", today)
         .order("created_at", { ascending: false });
       if (error) throw error;
-
       const grouped = new Map<string, { id: string; name: string; bills: any[]; total: number; due: number }>();
       for (const entry of data ?? []) {
         const bill = (entry as any).bills;
@@ -92,171 +85,75 @@ function StaffDashboard({ employeeId }: { employeeId: string }) {
       return [...grouped.values()].sort((a, b) => a.name.localeCompare(b.name));
     },
   });
-
   const selectedShop = orders.find((shop) => shop.id === selectedShopId);
-  const totalBills = orders.reduce((sum, shop) => sum + shop.bills.length, 0);
 
   return (
-    <div className="mx-auto max-w-xl space-y-5 pb-5">
-      <section className="relative isolate overflow-hidden rounded-[28px] bg-[#123F2D] px-5 pb-5 pt-5 text-white shadow-[0_16px_36px_rgba(18,63,45,0.18)] sm:px-6">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-16 h-52 w-52 rounded-full border-[28px] border-white/[0.045]" />
-        <div aria-hidden="true" className="pointer-events-none absolute -right-2 top-20 h-28 w-28 rounded-full border border-white/[0.08]" />
+    <div className="space-y-5">
+      <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#102c27] via-[#145044] to-[#14745d] p-5 text-white shadow-xl shadow-emerald-950/15">
+        <div className="pointer-events-none absolute -right-14 -top-16 h-52 w-52 rounded-full border-[28px] border-white/[0.07]" />
+        <div className="pointer-events-none absolute -bottom-20 right-20 h-40 w-40 rounded-full bg-white/[0.04] blur-2xl" />
         <div className="relative">
-          <p className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-emerald-100/75">
-            <CalendarDays className="h-3.5 w-3.5" /> {todayLabel}
-          </p>
-          <div className="mt-3 flex items-end justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="text-[27px] font-bold leading-tight tracking-tight">{greeting}</h1>
-              <p className="mt-1 text-sm text-emerald-50/75">Ready for today’s work?</p>
-            </div>
-            <div className="mb-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10">
-              <Store className="h-6 w-6 text-emerald-50" />
-            </div>
-          </div>
+          <div className="flex items-center justify-between gap-3"><span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-50">Field workspace</span><span className="text-[11px] font-semibold text-white/65">{new Date().toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}</span></div>
+          <h1 className="mt-4 text-[26px] font-extrabold leading-tight tracking-tight">Your work, <span className="text-emerald-200">made simple.</span></h1>
+          <p className="mt-1 max-w-xs text-xs leading-relaxed text-white/70">Today's shop visits, collections and delivery bills in one place.</p>
           <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.09] p-3.5 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-100/70">Today’s orders</p>
-              <p className="mt-1 text-[27px] font-bold leading-none tabular-nums">{ordersLoading ? "—" : totalBills}</p>
-              <p className="mt-1.5 text-[11px] text-emerald-50/65">{ordersLoading ? "Loading" : `${orders.length} shops`}</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.09] p-3.5 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-100/70">Collection today</p>
-              <p className="mt-1 text-[25px] font-bold leading-none tabular-nums">{paymentsLoading ? "—" : inr(collectionTotal)}</p>
-              <p className="mt-1.5 text-[11px] text-emerald-50/65">{paymentsLoading ? "Loading" : `${collectionPayments.length} payments`}</p>
-            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/10 p-3"><div className="text-[10px] font-semibold text-white/60">Shops to visit</div><div className="mt-1 text-2xl font-extrabold tabular">{isLoading ? "—" : orders.length}</div></div>
+            <div className="rounded-2xl border border-white/10 bg-white/10 p-3"><div className="text-[10px] font-semibold text-white/60">Today's bills</div><div className="mt-1 text-2xl font-extrabold tabular">{isLoading ? "—" : orders.reduce((sum, shop) => sum + shop.bills.length, 0)}</div></div>
           </div>
+          <button type="button" onClick={() => document.getElementById("driver-collect")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 text-sm font-extrabold text-emerald-900 shadow-lg shadow-black/10 transition active:scale-[0.99]"><HandCoins className="h-4 w-4" /> Collect a payment <ArrowUpRight className="h-4 w-4" /></button>
         </div>
       </section>
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between px-0.5">
-          <div>
-            <h2 className="text-base font-bold tracking-tight text-slate-900">Quick actions</h2>
-            <p className="mt-0.5 text-xs text-slate-500">Your everyday tasks</p>
+        <div className="flex items-end justify-between gap-3">
+          <div><h2 className="text-base font-extrabold tracking-tight">Today's collection</h2><p className="mt-0.5 text-xs text-muted-foreground">Payments recorded by you today</p></div>
+          <span className="text-xs font-semibold text-muted-foreground">{paymentsLoading ? "Loading…" : `${collectionPayments.length} payments`}</span>
+        </div>
+        <Card className="overflow-hidden rounded-[24px] border-emerald-900/5 p-4 shadow-sm sm:p-5">
+          <div className="rounded-2xl bg-emerald-50 p-4 dark:bg-emerald-950/25">
+            <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Total collected today</div>
+            <div className="mt-1 text-3xl font-extrabold tracking-tight text-emerald-950 tabular dark:text-emerald-100">{paymentsLoading ? "—" : inr(collectionTotal)}</div>
+            <div className="mt-1 text-[11px] font-medium text-emerald-800/70 dark:text-emerald-200/70">{paymentsLoading ? "Updating collections…" : `${collectionPayments.length} successful payment${collectionPayments.length === 1 ? "" : "s"} recorded`}</div>
           </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => setBillDialogOpen(true)}
-          className="group flex w-full items-center gap-3.5 rounded-2xl bg-[#176B49] p-4 text-left text-white shadow-[0_8px_20px_rgba(23,107,73,0.16)] transition active:scale-[0.99]"
-        >
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15"><Plus className="h-6 w-6" /></span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-bold">Add new bill</span>
-            <span className="mt-0.5 block text-xs text-emerald-50/75">Take a photo or enter bill details</span>
-          </span>
-          <ArrowUpRight className="h-5 w-5 text-white/80 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-        </button>
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => { setSelectedShopId(null); setShowCollectPayment((value) => !value); }}
-            aria-expanded={showCollectPayment}
-            className="flex min-h-[88px] items-center gap-3 rounded-2xl border border-slate-200/90 bg-white p-3.5 text-left shadow-[0_3px_12px_rgba(15,23,42,0.035)] transition hover:border-blue-200 active:scale-[0.99]"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700"><HandCoins className="h-5 w-5" /></span>
-            <span className="min-w-0">
-              <span className="block text-sm font-bold text-slate-900">Payment</span>
-              <span className="mt-0.5 block text-[11px] text-slate-500">Collect money</span>
-            </span>
-          </button>
-          <Link
-            to="/shops"
-            className="flex min-h-[88px] items-center gap-3 rounded-2xl border border-slate-200/90 bg-white p-3.5 text-left shadow-[0_3px_12px_rgba(15,23,42,0.035)] transition hover:border-amber-200 active:scale-[0.99]"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700"><Store className="h-5 w-5" /></span>
-            <span className="min-w-0">
-              <span className="block text-sm font-bold text-slate-900">Shops</span>
-              <span className="mt-0.5 block text-[11px] text-slate-500">Find a shop</span>
-            </span>
-          </Link>
-        </div>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl bg-emerald-500/10 p-3"><div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Cash</div><div className="mt-1 text-lg font-extrabold tabular">{paymentsLoading ? "—" : inr(cashTotal)}</div></div>
+            <div className="rounded-xl bg-sky-500/10 p-3"><div className="text-xs font-semibold text-sky-700 dark:text-sky-400">UPI</div><div className="mt-1 text-lg font-extrabold tabular">{paymentsLoading ? "—" : inr(upiTotal)}</div></div>
+            <div className="rounded-xl bg-blue-500/10 p-3"><div className="text-xs font-semibold text-blue-700 dark:text-blue-400">Bank transfer</div><div className="mt-1 text-lg font-extrabold tabular">{paymentsLoading ? "—" : inr(bankTotal)}</div></div>
+            <div className="rounded-xl bg-amber-500/10 p-3"><div className="text-xs font-semibold text-amber-700 dark:text-amber-400">Cheque</div><div className="mt-1 text-lg font-extrabold tabular">{paymentsLoading ? "—" : inr(chequeTotal)}</div></div>
+          </div>
+          <div className="mt-3 flex items-center justify-between border-t border-border/70 pt-3 text-sm"><span className="font-semibold text-muted-foreground">Online total (UPI + Bank)</span><span className="font-extrabold tabular">{paymentsLoading ? "—" : inr(onlineTotal)}</span></div>
+        </Card>
       </section>
 
-      {showCollectPayment && (
-        <section className="space-y-3 rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-bold text-slate-900">Collect payment</h2>
-              <p className="mt-0.5 text-xs text-slate-500">Search a shop and select its pending bill.</p>
-            </div>
-            <button type="button" onClick={() => setShowCollectPayment(false)} className="rounded-lg px-2 py-1 text-xs font-bold text-slate-500">Close</button>
-          </div>
-          <CollectPayment />
-        </section>
-      )}
-
-      <section className="space-y-3">
-        <div className="flex items-end justify-between gap-3 px-0.5">
-          <div>
-            <h2 className="text-lg font-bold tracking-tight text-slate-900">Aaj ke Orders</h2>
-            <p className="mt-0.5 text-xs text-slate-500">Today’s assigned shops and bills</p>
-          </div>
-          <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800">{ordersLoading ? "…" : `${orders.length} shops`}</span>
-        </div>
-
-        {ordersLoading ? (
-          <Card className="p-5 text-sm text-muted-foreground">Aaj ke orders load ho rahe hain…</Card>
-        ) : orders.length === 0 ? (
-          <div className="rounded-[22px] border border-dashed border-slate-300 bg-white px-5 py-8 text-center">
-            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500"><FileText className="h-5 w-5" /></span>
-            <p className="mt-3 text-sm font-bold text-slate-800">Aaj koi order nahi hai</p>
-            <p className="mt-1 text-xs leading-relaxed text-slate-500">Owner ke assign kiye hue orders yahan dikhai denge.</p>
-          </div>
-        ) : (
-          <div className="space-y-2.5">
-            {orders.map((shop, index) => (
-              <button
-                key={shop.id}
-                type="button"
-                onClick={() => { setSelectedShopId(shop.id); setShowCollectPayment(false); }}
-                className="group w-full rounded-[20px] border border-slate-200/90 bg-white p-4 text-left shadow-[0_3px_14px_rgba(15,23,42,0.035)] transition hover:border-emerald-200 hover:shadow-[0_8px_22px_rgba(15,23,42,0.06)] active:scale-[0.995]"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#EAF3EE] text-sm font-extrabold text-[#176B49]">{shop.name.trim().slice(0, 1).toUpperCase()}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-bold text-slate-900">{shop.name}</span>
-                    <span className="mt-1 block text-[11px] text-slate-500">{shop.bills.length} bill{shop.bills.length === 1 ? "" : "s"} · Order {index + 1}</span>
-                  </span>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-emerald-700" />
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Bill total</p>
-                    <p className="mt-1 text-sm font-bold text-slate-900 tabular-nums">{inr(shop.total)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Balance due</p>
-                    <p className={`mt-1 text-sm font-bold tabular-nums ${shop.due > 0 ? "text-rose-700" : "text-emerald-700"}`}>{inr(shop.due)}</p>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {selectedShopId && (
-        <section className="scroll-mt-24 space-y-3 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">Selected shop</p>
-              <h2 className="mt-1 truncate text-base font-bold text-slate-900">{selectedShop?.name ?? "Shop details"}</h2>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Link to="/shops/$id" params={{ id: selectedShopId }} className="rounded-lg border border-slate-200 px-2.5 py-2 text-[11px] font-bold text-slate-700">Shop details</Link>
-              <button type="button" onClick={() => setSelectedShopId(null)} aria-label="Close selected shop" className="rounded-lg p-2 text-slate-500"><ChevronLeft className="h-4 w-4" /></button>
-            </div>
-          </div>
+      {selectedShopId ? (
+        <div id="driver-collect" className="scroll-mt-24 space-y-3">
+          <button onClick={() => setSelectedShopId(null)} className="inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Back to today's orders</button>
+          <div className="flex items-center justify-between gap-3"><div><h2 className="text-lg font-extrabold">{selectedShop?.name ?? "Shop bills"}</h2><p className="text-xs text-muted-foreground">Today's bills and all older pending bills</p></div>{selectedShopId && <Link to="/shops/$id" params={{ id: selectedShopId }} className="shrink-0 rounded-xl border border-border px-3 py-2 text-xs font-bold text-primary hover:bg-primary/5">Shop details · Edit bill</Link>}</div>
           <CollectPayment key={selectedShopId} initialShopId={selectedShopId} />
-        </section>
+        </div>
+      ) : (
+        <>
+          <section className="space-y-3">
+            <div className="flex items-end justify-between gap-3"><div><h2 className="text-base font-extrabold tracking-tight">Shops with orders today</h2><p className="mt-0.5 text-xs text-muted-foreground">Based on the visit date selected by the owner</p></div><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{orders.length} shops</span></div>
+            {isLoading ? <Card className="p-5 text-sm text-muted-foreground">Loading today's orders…</Card> : orders.length === 0 ? <Empty>No orders scheduled for today yet.</Empty> : (
+              <Card className="divide-y divide-border/70 overflow-hidden">
+                {orders.map((shop) => (
+                  <button key={shop.id} onClick={() => setSelectedShopId(shop.id)} className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-primary/[0.035]">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Store className="h-5 w-5" /></span>
+                    <span className="min-w-0 flex-1"><span className="block truncate text-sm font-extrabold">{shop.name}</span><span className="mt-1 block text-xs text-muted-foreground">{shop.bills.length} today's bill(s) · Total {inr(shop.total)}</span><span className="mt-0.5 block text-[11px] font-semibold text-destructive">Outstanding: {inr(shop.due)}</span></span>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+                  </button>
+                ))}
+              </Card>
+            )}
+          </section>
+          <section id="driver-collect" className="scroll-mt-24 space-y-3"><div><h2 className="text-base font-extrabold tracking-tight">Collect payment</h2><p className="mt-0.5 text-xs text-muted-foreground">Search any shop for old pending bills or an advance payment</p></div><CollectPayment /></section>
+        </>
       )}
-
-      <BillEntryDialog open={billDialogOpen} onOpenChange={setBillDialogOpen} driverMode />
     </div>
   );
 }
+
 function MetricCard({ label, value, caption, icon: Icon, tone = "navy" }: {
   label: string; value: string; caption: string; icon: ElementType;
   tone?: "navy" | "green" | "red" | "amber";
