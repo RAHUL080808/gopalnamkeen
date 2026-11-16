@@ -46,6 +46,8 @@ function StaffDashboard({ employeeId }: { employeeId: string }) {
     day: "numeric",
     month: "long",
   }).format(new Date());
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const dayStart = new Date(`${today}T00:00:00`);
   const dayEnd = new Date(dayStart);
   dayEnd.setDate(dayEnd.getDate() + 1);
@@ -95,72 +97,89 @@ function StaffDashboard({ employeeId }: { employeeId: string }) {
   const totalBills = orders.reduce((sum, shop) => sum + shop.bills.length, 0);
 
   return (
-    <div className="mx-auto max-w-xl space-y-4 pb-4">
-      <section className="rounded-[24px] border border-emerald-950/10 bg-white p-4 shadow-sm sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-800">
-              <CalendarDays className="h-3.5 w-3.5" />
-              {todayLabel}
-            </p>
-            <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900">Namaste! 👋</h1>
-            <p className="mt-1 text-sm text-slate-500">Aaj ka kaam yahan se manage karein.</p>
+    <div className="mx-auto max-w-xl space-y-5 pb-5">
+      <section className="relative isolate overflow-hidden rounded-[28px] bg-[#123F2D] px-5 pb-5 pt-5 text-white shadow-[0_16px_36px_rgba(18,63,45,0.18)] sm:px-6">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-16 h-52 w-52 rounded-full border-[28px] border-white/[0.045]" />
+        <div aria-hidden="true" className="pointer-events-none absolute -right-2 top-20 h-28 w-28 rounded-full border border-white/[0.08]" />
+        <div className="relative">
+          <p className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-emerald-100/75">
+            <CalendarDays className="h-3.5 w-3.5" /> {todayLabel}
+          </p>
+          <div className="mt-3 flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-[27px] font-bold leading-tight tracking-tight">{greeting}</h1>
+              <p className="mt-1 text-sm text-emerald-50/75">Ready for today’s work?</p>
+            </div>
+            <div className="mb-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10">
+              <Store className="h-6 w-6 text-emerald-50" />
+            </div>
           </div>
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800">
-            <Store className="h-5 w-5" />
-          </span>
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 divide-x divide-slate-200 rounded-2xl bg-slate-50 px-3 py-3">
-          <div className="pr-3">
-            <p className="text-[11px] font-semibold text-slate-500">Aaj ke orders</p>
-            <p className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 tabular">{ordersLoading ? "—" : totalBills}</p>
-            <p className="text-[10px] text-slate-500">{ordersLoading ? "Loading…" : `${orders.length} shops`}</p>
-          </div>
-          <div className="pl-3">
-            <p className="text-[11px] font-semibold text-slate-500">Aaj ki collection</p>
-            <p className="mt-1 text-2xl font-extrabold tracking-tight text-emerald-800 tabular">{paymentsLoading ? "—" : inr(collectionTotal)}</p>
-            <p className="text-[10px] text-slate-500">{paymentsLoading ? "Loading…" : `${collectionPayments.length} payments`}</p>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.09] p-3.5 backdrop-blur-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-100/70">Today’s orders</p>
+              <p className="mt-1 text-[27px] font-bold leading-none tabular-nums">{ordersLoading ? "—" : totalBills}</p>
+              <p className="mt-1.5 text-[11px] text-emerald-50/65">{ordersLoading ? "Loading" : `${orders.length} shops`}</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.09] p-3.5 backdrop-blur-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-100/70">Collection today</p>
+              <p className="mt-1 text-[25px] font-bold leading-none tabular-nums">{paymentsLoading ? "—" : inr(collectionTotal)}</p>
+              <p className="mt-1.5 text-[11px] text-emerald-50/65">{paymentsLoading ? "Loading" : `${collectionPayments.length} payments`}</p>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="space-y-2.5">
-        <h2 className="px-0.5 text-sm font-extrabold tracking-tight text-slate-900">Quick actions</h2>
-        <div className="grid grid-cols-3 gap-2.5">
-          <button
-            type="button"
-            onClick={() => setBillDialogOpen(true)}
-            className="flex min-h-[104px] flex-col items-center justify-center gap-2 rounded-2xl border border-emerald-800/10 bg-emerald-800 px-2 py-3 text-center text-white shadow-sm transition active:scale-[0.98]"
-          >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15"><Plus className="h-6 w-6" /></span>
-            <span className="text-xs font-extrabold">Naya Bill</span>
-          </button>
+      <section className="space-y-3">
+        <div className="flex items-center justify-between px-0.5">
+          <div>
+            <h2 className="text-base font-bold tracking-tight text-slate-900">Quick actions</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Your everyday tasks</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setBillDialogOpen(true)}
+          className="group flex w-full items-center gap-3.5 rounded-2xl bg-[#176B49] p-4 text-left text-white shadow-[0_8px_20px_rgba(23,107,73,0.16)] transition active:scale-[0.99]"
+        >
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15"><Plus className="h-6 w-6" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-bold">Add new bill</span>
+            <span className="mt-0.5 block text-xs text-emerald-50/75">Take a photo or enter bill details</span>
+          </span>
+          <ArrowUpRight className="h-5 w-5 text-white/80 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+        </button>
+        <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
             onClick={() => { setSelectedShopId(null); setShowCollectPayment((value) => !value); }}
             aria-expanded={showCollectPayment}
-            className="flex min-h-[104px] flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-3 text-center text-slate-800 shadow-sm transition active:scale-[0.98]"
+            className="flex min-h-[88px] items-center gap-3 rounded-2xl border border-slate-200/90 bg-white p-3.5 text-left shadow-[0_3px_12px_rgba(15,23,42,0.035)] transition hover:border-blue-200 active:scale-[0.99]"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700"><HandCoins className="h-6 w-6" /></span>
-            <span className="text-xs font-extrabold">Payment Lo</span>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700"><HandCoins className="h-5 w-5" /></span>
+            <span className="min-w-0">
+              <span className="block text-sm font-bold text-slate-900">Payment</span>
+              <span className="mt-0.5 block text-[11px] text-slate-500">Collect money</span>
+            </span>
           </button>
           <Link
             to="/shops"
-            className="flex min-h-[104px] flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-3 text-center text-slate-800 shadow-sm transition active:scale-[0.98]"
+            className="flex min-h-[88px] items-center gap-3 rounded-2xl border border-slate-200/90 bg-white p-3.5 text-left shadow-[0_3px_12px_rgba(15,23,42,0.035)] transition hover:border-amber-200 active:scale-[0.99]"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-700"><Store className="h-6 w-6" /></span>
-            <span className="text-xs font-extrabold">Shop Search</span>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700"><Store className="h-5 w-5" /></span>
+            <span className="min-w-0">
+              <span className="block text-sm font-bold text-slate-900">Shops</span>
+              <span className="mt-0.5 block text-[11px] text-slate-500">Find a shop</span>
+            </span>
           </Link>
         </div>
       </section>
 
       {showCollectPayment && (
-        <section className="space-y-3 rounded-2xl border border-blue-100 bg-white p-3.5 shadow-sm">
+        <section className="space-y-3 rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-extrabold text-slate-900">Payment collect karein</h2>
-              <p className="mt-0.5 text-xs text-slate-500">Shop search karke pending bill select karein.</p>
+              <h2 className="text-sm font-bold text-slate-900">Collect payment</h2>
+              <p className="mt-0.5 text-xs text-slate-500">Search a shop and select its pending bill.</p>
             </div>
             <button type="button" onClick={() => setShowCollectPayment(false)} className="rounded-lg px-2 py-1 text-xs font-bold text-slate-500">Close</button>
           </div>
@@ -169,42 +188,48 @@ function StaffDashboard({ employeeId }: { employeeId: string }) {
       )}
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-end justify-between gap-3 px-0.5">
           <div>
-            <h2 className="text-base font-extrabold tracking-tight text-slate-900">Aaj ke Orders</h2>
-            <p className="mt-0.5 text-xs text-slate-500">Aaj ke liye assigned shop orders</p>
+            <h2 className="text-lg font-bold tracking-tight text-slate-900">Aaj ke Orders</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Today’s assigned shops and bills</p>
           </div>
-          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">{ordersLoading ? "…" : `${orders.length} shops`}</span>
+          <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800">{ordersLoading ? "…" : `${orders.length} shops`}</span>
         </div>
 
         {ordersLoading ? (
           <Card className="p-5 text-sm text-muted-foreground">Aaj ke orders load ho rahe hain…</Card>
         ) : orders.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-7 text-center">
-            <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-500"><FileText className="h-5 w-5" /></span>
+          <div className="rounded-[22px] border border-dashed border-slate-300 bg-white px-5 py-8 text-center">
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500"><FileText className="h-5 w-5" /></span>
             <p className="mt-3 text-sm font-bold text-slate-800">Aaj koi order nahi hai</p>
-            <p className="mt-1 text-xs text-slate-500">Owner ke assign kiye hue orders yahan dikhai denge.</p>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">Owner ke assign kiye hue orders yahan dikhai denge.</p>
           </div>
         ) : (
           <div className="space-y-2.5">
-            {orders.map((shop) => (
+            {orders.map((shop, index) => (
               <button
                 key={shop.id}
                 type="button"
                 onClick={() => { setSelectedShopId(shop.id); setShowCollectPayment(false); }}
-                className="w-full rounded-2xl border border-slate-200 bg-white p-3.5 text-left shadow-sm transition hover:border-emerald-200 active:scale-[0.995]"
+                className="group w-full rounded-[20px] border border-slate-200/90 bg-white p-4 text-left shadow-[0_3px_14px_rgba(15,23,42,0.035)] transition hover:border-emerald-200 hover:shadow-[0_8px_22px_rgba(15,23,42,0.06)] active:scale-[0.995]"
               >
                 <div className="flex items-center gap-3">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800"><Store className="h-5 w-5" /></span>
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#EAF3EE] text-sm font-extrabold text-[#176B49]">{shop.name.trim().slice(0, 1).toUpperCase()}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-extrabold text-slate-900">{shop.name}</span>
-                    <span className="mt-1 block text-xs text-slate-500">{shop.bills.length} bill{shop.bills.length === 1 ? "" : "s"} · Total {inr(shop.total)}</span>
+                    <span className="block truncate text-[14px] font-bold text-slate-900">{shop.name}</span>
+                    <span className="mt-1 block text-[11px] text-slate-500">{shop.bills.length} bill{shop.bills.length === 1 ? "" : "s"} · Order {index + 1}</span>
                   </span>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" />
+                  <ChevronRight className="h-5 w-5 shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-emerald-700" />
                 </div>
-                <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5">
-                  <span className="text-[11px] font-semibold text-slate-500">Outstanding</span>
-                  <span className={`text-sm font-extrabold tabular ${shop.due > 0 ? "text-rose-700" : "text-emerald-700"}`}>{inr(shop.due)}</span>
+                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Bill total</p>
+                    <p className="mt-1 text-sm font-bold text-slate-900 tabular-nums">{inr(shop.total)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Balance due</p>
+                    <p className={`mt-1 text-sm font-bold tabular-nums ${shop.due > 0 ? "text-rose-700" : "text-emerald-700"}`}>{inr(shop.due)}</p>
+                  </div>
                 </div>
               </button>
             ))}
@@ -213,11 +238,11 @@ function StaffDashboard({ employeeId }: { employeeId: string }) {
       </section>
 
       {selectedShopId && (
-        <section className="scroll-mt-24 space-y-3 rounded-2xl border border-emerald-100 bg-white p-3.5 shadow-sm">
+        <section className="scroll-mt-24 space-y-3 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">Selected shop</p>
-              <h2 className="mt-1 truncate text-base font-extrabold text-slate-900">{selectedShop?.name ?? "Shop details"}</h2>
+              <h2 className="mt-1 truncate text-base font-bold text-slate-900">{selectedShop?.name ?? "Shop details"}</h2>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <Link to="/shops/$id" params={{ id: selectedShopId }} className="rounded-lg border border-slate-200 px-2.5 py-2 text-[11px] font-bold text-slate-700">Shop details</Link>
